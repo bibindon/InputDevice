@@ -13,6 +13,9 @@
 #include <crtdbg.h>
 #include <vector>
 
+#include "../InputDevice/InputDevice.h"
+using namespace InputDevice;
+
 #define SAFE_RELEASE(p) { if (p) { (p)->Release(); (p) = NULL; } }
 
 const int WINDOW_SIZE_W = 1600;
@@ -84,6 +87,9 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
                              NULL);
 
     InitD3D(hWnd);
+
+    KeyBoard::Initialize();
+
     ShowWindow(hWnd, SW_SHOWDEFAULT);
     UpdateWindow(hWnd);
 
@@ -98,6 +104,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
         else
         {
             Sleep(16);
+            KeyBoard::Update();
             Render();
         }
 
@@ -107,6 +114,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
         }
     }
 
+    KeyBoard::Finalize();
     Cleanup();
 
     UnregisterClass(_T("Window1"), wc.hInstance);
