@@ -88,7 +88,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
 
     InitD3D(hWnd);
 
-    KeyBoard::Initialize();
+    InitializeInputDevice(hInstance, hWnd);
 
     ShowWindow(hWnd, SW_SHOWDEFAULT);
     UpdateWindow(hWnd);
@@ -104,7 +104,10 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
         else
         {
             Sleep(16);
-            KeyBoard::Update();
+
+            // キーボード、マウス、ゲームパッドを
+            // まとめてアップデートするUpdateInputDevice関数を作るべきなきがする
+            SKeyBoard::Update();
             Render();
         }
 
@@ -114,7 +117,6 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
         }
     }
 
-    KeyBoard::Finalize();
     Cleanup();
 
     UnregisterClass(_T("Window1"), wc.hInstance);
@@ -318,9 +320,24 @@ void Render()
     hResult = g_pd3dDevice->BeginScene();
     assert(hResult == S_OK);
 
-    TCHAR msg[100];
-    _tcscpy_s(msg, 100, _T("Xファイルの読み込みと表示"));
-    TextDraw(g_pFont, msg, 0, 0);
+    if (SKeyBoard::IsDown(DIK_A))
+    {
+        TCHAR msg[100];
+        _tcscpy_s(msg, 100, _T("A"));
+        TextDraw(g_pFont, msg, 0, 0);
+    }
+    else if (SKeyBoard::IsDown(DIK_B))
+    {
+        TCHAR msg[100];
+        _tcscpy_s(msg, 100, _T("B"));
+        TextDraw(g_pFont, msg, 0, 0);
+    }
+    else if (SKeyBoard::IsDown(DIK_C))
+    {
+        TCHAR msg[100];
+        _tcscpy_s(msg, 100, _T("C"));
+        TextDraw(g_pFont, msg, 0, 0);
+    }
 
     hResult = g_pEffect->SetTechnique("Technique1");
     assert(hResult == S_OK);
