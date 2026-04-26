@@ -22,6 +22,7 @@ namespace
     MousePosition g_mousePosition = { };
     MousePosition g_mousePrevPosition = { };
     MousePosition g_mouseDelta = { };
+    bool g_mouseCursorVisible = true;
     std::deque<std::vector<BYTE>> g_mouseButtonDeque;
     LPDIRECTINPUTDEVICE8 g_gamePad = nullptr;
     DIJOYSTATE2 g_gamePadState = { };
@@ -51,6 +52,24 @@ namespace
         return 0 <= key && key < static_cast<char>(kMouseButtonCount);
     }
 
+    void ApplyMouseCursorVisible(bool isVisible)
+    {
+        if (isVisible)
+        {
+            while (ShowCursor(TRUE) < 0)
+            {
+            }
+        }
+        else
+        {
+            while (ShowCursor(FALSE) >= 0)
+            {
+            }
+        }
+
+        g_mouseCursorVisible = isVisible;
+    }
+
     void UpdateMousePosition()
     {
         if (g_inputHWnd == nullptr)
@@ -77,6 +96,33 @@ namespace
 
         g_mousePosition.x = cursorPosition.x;
         g_mousePosition.y = cursorPosition.y;
+    }
+
+    bool IsMouseCursorInWindow()
+    {
+        if (g_inputHWnd == nullptr)
+        {
+            return false;
+        }
+
+        POINT cursorPosition = { };
+        if (!GetCursorPos(&cursorPosition))
+        {
+            return false;
+        }
+
+        if (!ScreenToClient(g_inputHWnd, &cursorPosition))
+        {
+            return false;
+        }
+
+        RECT clientRect = { };
+        if (!GetClientRect(g_inputHWnd, &clientRect))
+        {
+            return false;
+        }
+
+        return PtInRect(&clientRect, cursorPosition) != FALSE;
     }
 
     bool IsValidGamePadButtonIndex(GamePadButton button)
@@ -773,6 +819,7 @@ bool Mouse::Initialize()
     g_mousePosition = { };
     g_mousePrevPosition = { };
     g_mouseDelta = { };
+    g_mouseCursorVisible = true;
     g_mouseButtonDeque.clear();
 
     HRESULT ret = g_directInput->CreateDevice(GUID_SysMouse, &g_mouse, NULL);
@@ -815,6 +862,7 @@ bool Mouse::Finalize()
     g_mousePosition = { };
     g_mousePrevPosition = { };
     g_mouseDelta = { };
+    ApplyMouseCursorVisible(true);
 
     std::deque<std::vector<BYTE>> emptyDeque;
     g_mouseButtonDeque.swap(emptyDeque);
@@ -935,6 +983,21 @@ bool Mouse::IsUp(const char key)
     }
 
     return (g_mouseState.rgbButtons[(std::size_t)key] & 0x80) == 0;
+}
+
+bool Mouse::IsInWindow()
+{
+    return IsMouseCursorInWindow();
+}
+
+bool Mouse::IsVisible()
+{
+    return g_mouseCursorVisible;
+}
+
+void Mouse::SetVisible(bool isVisible)
+{
+    ApplyMouseCursorVisible(isVisible);
 }
 
 MousePosition Mouse::GetPosition()

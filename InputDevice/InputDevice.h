@@ -120,6 +120,9 @@ public:
     static bool IsDownFirstFrame(const char key);
     static bool IsHold(const char key);
     static bool IsUp(const char key);
+    static bool IsInWindow();
+    static bool IsVisible();
+    static void SetVisible(bool isVisible);
     static MousePosition GetPosition();
 
     // 前フレームからの移動量
@@ -261,4 +264,3 @@ private:
 
 
 }
-

@@ -153,10 +153,19 @@ void TextDraw(LPD3DXFONT pFont, TCHAR* text, int X, int Y, D3DCOLOR color)
 
 void DrawInputStatus()
 {
+    if (SKeyBoard::IsDownFirstFrame(DIK_F1))
+    {
+        Mouse::SetVisible(!Mouse::IsVisible());
+    }
+
     TCHAR msg[256];
     TCHAR leftMouseStatus[32];
     TCHAR rightMouseStatus[32];
     TCHAR middleMouseStatus[32];
+    const bool isMouseInWindow = Mouse::IsInWindow();
+    const bool isMouseVisible = Mouse::IsVisible();
+    const TCHAR* cursorVisibleText = _T("Hidden");
+    const TCHAR* mouseInWindowText = _T("Out");
     MousePosition mousePosition = Mouse::GetPosition();
     GamePadStick gamePadStick;
     MousePosition mouseDelta = Mouse::GetDelta(&gamePadStick);
@@ -226,7 +235,28 @@ void DrawInputStatus()
     _snwprintf_s(msg, 256, _TRUNCATE, L"%s", keyboardText.c_str());
     TextDraw(g_pFont, msg, 20, 90, keyboardColor);
 
-    _stprintf_s(msg, 256, _T("Mouse: Left / Right / Middle  x:%ld  y:%ld"), mousePosition.x, mousePosition.y);
+    if (isMouseVisible)
+    {
+        cursorVisibleText = _T("Visible");
+    }
+
+    if (isMouseInWindow)
+    {
+        mouseInWindowText = _T("In");
+    }
+
+    _stprintf_s(msg,
+                256,
+                _T("F1: Cursor Show/Hide  Current:%s"),
+                cursorVisibleText);
+    TextDraw(g_pFont, msg, 20, 115);
+
+    _stprintf_s(msg,
+                256,
+                _T("Mouse: Left / Right / Middle  x:%ld  y:%ld  %s"),
+                mousePosition.x,
+                mousePosition.y,
+                mouseInWindowText);
     TextDraw(g_pFont, msg, 20, 140);
 
     _stprintf_s(msg, 256, _T("Mouse Delta: x:%ld  y:%ld stick x:%.2f stick y:%.2f stick power:%.2f, stick angle:%.2f"),
