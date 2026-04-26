@@ -117,7 +117,7 @@ public:
 private:
 };
 
-class GamePad
+class GamePad_D
 {
 public:
     static bool Initialize();

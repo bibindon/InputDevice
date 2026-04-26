@@ -287,13 +287,13 @@ void DrawInputStatus()
     _tcscpy_s(msg, 256, _T("GamePad: Button 0 / 1 / 2 / 3"));
     TextDraw(g_pFont, msg, 20, 220);
 
-    if (GamePad::IsDown(0))
+    if (GamePad_D::IsDown(0))
     {
-        if (GamePad::IsHold(0))
+        if (GamePad_D::IsHold(0))
         {
             _tcscpy_s(gamePadButton0Status, 32, _T("Down+Hold"));
         }
-        else if (GamePad::IsDownFirstFrame(0))
+        else if (GamePad_D::IsDownFirstFrame(0))
         {
             _tcscpy_s(gamePadButton0Status, 32, _T("Down+First"));
             gamePadColor = D3DCOLOR_ARGB(255, 0, 160, 0);
@@ -308,13 +308,13 @@ void DrawInputStatus()
         _tcscpy_s(gamePadButton0Status, 32, _T("Up"));
     }
 
-    if (GamePad::IsDown(1))
+    if (GamePad_D::IsDown(1))
     {
-        if (GamePad::IsHold(1))
+        if (GamePad_D::IsHold(1))
         {
             _tcscpy_s(gamePadButton1Status, 32, _T("Down+Hold"));
         }
-        else if (GamePad::IsDownFirstFrame(1))
+        else if (GamePad_D::IsDownFirstFrame(1))
         {
             _tcscpy_s(gamePadButton1Status, 32, _T("Down+First"));
             gamePadColor = D3DCOLOR_ARGB(255, 0, 160, 0);
@@ -329,13 +329,13 @@ void DrawInputStatus()
         _tcscpy_s(gamePadButton1Status, 32, _T("Up"));
     }
 
-    if (GamePad::IsDown(2))
+    if (GamePad_D::IsDown(2))
     {
-        if (GamePad::IsHold(2))
+        if (GamePad_D::IsHold(2))
         {
             _tcscpy_s(gamePadButton2Status, 32, _T("Down+Hold"));
         }
-        else if (GamePad::IsDownFirstFrame(2))
+        else if (GamePad_D::IsDownFirstFrame(2))
         {
             _tcscpy_s(gamePadButton2Status, 32, _T("Down+First"));
             gamePadColor = D3DCOLOR_ARGB(255, 0, 160, 0);
@@ -350,13 +350,13 @@ void DrawInputStatus()
         _tcscpy_s(gamePadButton2Status, 32, _T("Up"));
     }
 
-    if (GamePad::IsDown(3))
+    if (GamePad_D::IsDown(3))
     {
-        if (GamePad::IsHold(3))
+        if (GamePad_D::IsHold(3))
         {
             _tcscpy_s(gamePadButton3Status, 32, _T("Down+Hold"));
         }
-        else if (GamePad::IsDownFirstFrame(3))
+        else if (GamePad_D::IsDownFirstFrame(3))
         {
             _tcscpy_s(gamePadButton3Status, 32, _T("Down+First"));
             gamePadColor = D3DCOLOR_ARGB(255, 0, 160, 0);

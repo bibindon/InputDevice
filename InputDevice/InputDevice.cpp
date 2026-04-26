@@ -494,7 +494,7 @@ bool Mouse::IsUp(const char key)
     return (g_mouseState.rgbButtons[(std::size_t)key] & 0x80) == 0;
 }
 
-bool GamePad::Initialize()
+bool GamePad_D::Initialize()
 {
     if (g_directInput == nullptr || g_inputHWnd == nullptr)
     {
@@ -545,7 +545,7 @@ bool GamePad::Initialize()
     return true;
 }
 
-bool GamePad::Finalize()
+bool GamePad_D::Finalize()
 {
     ZeroMemory(&g_gamePadState, sizeof(g_gamePadState));
     ZeroMemory(&g_gamePadPrevState, sizeof(g_gamePadPrevState));
@@ -563,7 +563,7 @@ bool GamePad::Finalize()
     return true;
 }
 
-bool GamePad::Update()
+bool GamePad_D::Update()
 {
     if (g_gamePad == nullptr)
     {
@@ -614,7 +614,7 @@ bool GamePad::Update()
     return true;
 }
 
-bool GamePad::IsDown(const char key)
+bool GamePad_D::IsDown(const char key)
 {
     if (!IsValidGamePadButtonIndex(key))
     {
@@ -624,7 +624,7 @@ bool GamePad::IsDown(const char key)
     return (g_gamePadState.rgbButtons[(std::size_t)key] & 0x80) != 0;
 }
 
-bool GamePad::IsDownFirstFrame(const char key)
+bool GamePad_D::IsDownFirstFrame(const char key)
 {
     if (!IsValidGamePadButtonIndex(key))
     {
@@ -637,7 +637,7 @@ bool GamePad::IsDownFirstFrame(const char key)
     return isDown && !wasDown;
 }
 
-bool GamePad::IsHold(const char key)
+bool GamePad_D::IsHold(const char key)
 {
     if (!IsValidGamePadButtonIndex(key))
     {
@@ -660,7 +660,7 @@ bool GamePad::IsHold(const char key)
     return true;
 }
 
-bool GamePad::IsUp(const char key)
+bool GamePad_D::IsUp(const char key)
 {
     if (!IsValidGamePadButtonIndex(key))
     {
@@ -688,19 +688,19 @@ void Initialize(HINSTANCE hInstance, HWND hWnd)
     SKeyBoard::Set(keyboard);
     g_keyboardOwnedByLibrary = true;
     Mouse::Initialize();
-    GamePad::Initialize();
+    GamePad_D::Initialize();
 }
 
 void Update()
 {
     SKeyBoard::Update();
     Mouse::Update();
-    GamePad::Update();
+    GamePad_D::Update();
 }
 
 void Finalize()
 {
-    GamePad::Finalize();
+    GamePad_D::Finalize();
     Mouse::Finalize();
 
     IKeyBoard* keyboard = SKeyBoard::Get();
