@@ -117,6 +117,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
         }
     }
 
+    FinalizeInputDevice();
     Cleanup();
 
     UnregisterClass(_T("Window1"), wc.hInstance);

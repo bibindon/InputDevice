@@ -8,9 +8,17 @@ namespace InputDevice
 {
 
 IKeyBoard* SKeyBoard::m_keyboard = nullptr;
+namespace
+{
+    LPDIRECTINPUT8 g_directInput = nullptr;
+    bool g_keyboardOwnedByLibrary = false;
+}
 
 void KeyBoard::Initialize(LPDIRECTINPUT8 directInput, HWND hWnd)
 {
+    ZeroMemory(m_key, sizeof(m_key));
+    ZeroMemory(m_keyPrev, sizeof(m_keyPrev));
+
     HRESULT ret = directInput->CreateDevice(GUID_SysKeyboard, &m_keyboard, NULL);
 
     ret = m_keyboard->SetDataFormat(&c_dfDIKeyboard);
@@ -25,7 +33,20 @@ void KeyBoard::Initialize(LPDIRECTINPUT8 directInput, HWND hWnd)
 
 void SKeyBoard::Set(IKeyBoard* arg)
 {
+    if (m_keyboard != nullptr && m_keyboard != arg && g_keyboardOwnedByLibrary)
+    {
+        m_keyboard->Finalize();
+        delete m_keyboard;
+        m_keyboard = nullptr;
+        g_keyboardOwnedByLibrary = false;
+    }
+
     m_keyboard = arg;
+}
+
+IKeyBoard* SKeyBoard::Get()
+{
+    return m_keyboard;
 }
 
 void SKeyBoard::Update()
@@ -105,8 +126,12 @@ void KeyBoard::Update()
 
 void KeyBoard::Finalize()
 {
-    m_keyboard->Release();
-    m_keyboard = nullptr;
+    if (m_keyboard != nullptr)
+    {
+        m_keyboard->Unacquire();
+        m_keyboard->Release();
+        m_keyboard = nullptr;
+    }
 }
 
 bool KeyBoard::IsDown(int keyCode)
@@ -226,16 +251,34 @@ bool GamePad::IsUp(const char key)
 // SKeyBoard::Set関数に渡せばよい
 void InitializeInputDevice(HINSTANCE hInstance, HWND hWnd)
 {
-    LPDIRECTINPUT8 directInput = nullptr;
     IKeyBoard* keyboard = new KeyBoard();
-    HRESULT hr = DirectInput8Create(hInstance, 
+    HRESULT hr = DirectInput8Create(hInstance,
                                     DIRECTINPUT_VERSION,
                                     IID_IDirectInput8,
-                                    (void**)&directInput,
+                                    (void**)&g_directInput,
                                     NULL);
 
-    keyboard->Initialize(directInput, hWnd);
+    keyboard->Initialize(g_directInput, hWnd);
     SKeyBoard::Set(keyboard);
+    g_keyboardOwnedByLibrary = true;
+}
+
+void FinalizeInputDevice()
+{
+    IKeyBoard* keyboard = SKeyBoard::Get();
+    if (keyboard != nullptr && g_keyboardOwnedByLibrary)
+    {
+        keyboard->Finalize();
+        delete keyboard;
+        g_keyboardOwnedByLibrary = false;
+        SKeyBoard::Set(nullptr);
+    }
+
+    if (g_directInput != nullptr)
+    {
+        g_directInput->Release();
+        g_directInput = nullptr;
+    }
 }
 
 }

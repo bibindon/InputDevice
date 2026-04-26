@@ -13,6 +13,7 @@ namespace InputDevice
 {
 
 void InitializeInputDevice(HINSTANCE hInstance, HWND hWnd);
+void FinalizeInputDevice();
 
 // テストコードでモックキーボードクラスを作って使いたい。
 // そのために継承を使う。
@@ -20,6 +21,7 @@ void InitializeInputDevice(HINSTANCE hInstance, HWND hWnd);
 class IKeyBoard
 {
 public:
+    virtual ~IKeyBoard() = default;
     virtual void Initialize(LPDIRECTINPUT8 directInput, HWND hWnd) = 0;
     virtual void Update() = 0;
     virtual void Finalize() = 0;
@@ -63,6 +65,7 @@ class SKeyBoard
 {
 public:
     static void Set(IKeyBoard* arg);
+    static IKeyBoard* Get();
 
     static void Update();
 
