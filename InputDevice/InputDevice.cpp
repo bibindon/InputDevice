@@ -281,7 +281,14 @@ bool MockKeyBoard::IsHold(int keyCode)
 
 void MockKeyBoard::SetKeyDown(int keyCode, bool isDown)
 {
-    m_key[keyCode] = isDown ? 0x80 : 0x00;
+    if (isDown)
+    {
+        m_key[keyCode] = 0x80;
+    }
+    else
+    {
+        m_key[keyCode] = 0x00;
+    }
 }
 
 void MockKeyBoard::ClearAllKeys()
@@ -403,6 +410,19 @@ bool Mouse::IsDown(const char key)
     }
 
     return (g_mouseState.rgbButtons[(std::size_t)key] & 0x80) != 0;
+}
+
+bool Mouse::IsDownFirstFrame(const char key)
+{
+    if (!IsValidMouseButtonIndex(key))
+    {
+        return false;
+    }
+
+    const std::size_t index = (std::size_t)key;
+    const bool isDown = (g_mouseState.rgbButtons[index] & 0x80) != 0;
+    const bool wasDown = (g_mousePrevState.rgbButtons[index] & 0x80) != 0;
+    return isDown && !wasDown;
 }
 
 bool Mouse::IsHold(const char key)

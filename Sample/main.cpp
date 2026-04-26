@@ -35,7 +35,7 @@ DWORD g_dwNumMaterials = 0;
 LPD3DXEFFECT g_pEffect = NULL;
 bool g_bClose = false;
 
-static void TextDraw(LPD3DXFONT pFont, TCHAR* text, int X, int Y);
+static void TextDraw(LPD3DXFONT pFont, TCHAR* text, int X, int Y, D3DCOLOR color = D3DCOLOR_ARGB(255, 0, 0, 0));
 static void DrawInputStatus();
 static std::wstring KeyCodeToString(int keyCode);
 static float GetFps();
@@ -133,7 +133,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
     return 0;
 }
 
-void TextDraw(LPD3DXFONT pFont, TCHAR* text, int X, int Y)
+void TextDraw(LPD3DXFONT pFont, TCHAR* text, int X, int Y, D3DCOLOR color)
 {
     RECT rect = { X, Y, 0, 0 };
 
@@ -144,7 +144,7 @@ void TextDraw(LPD3DXFONT pFont, TCHAR* text, int X, int Y)
                                       -1,
                                       &rect,
                                       DT_LEFT | DT_NOCLIP,
-                                      D3DCOLOR_ARGB(255, 0, 0, 0));
+                                      color);
 
     assert((int)hResult >= 0);
 }
@@ -152,6 +152,11 @@ void TextDraw(LPD3DXFONT pFont, TCHAR* text, int X, int Y)
 void DrawInputStatus()
 {
     TCHAR msg[256];
+    TCHAR leftMouseStatus[32];
+    TCHAR rightMouseStatus[32];
+    TCHAR middleMouseStatus[32];
+    D3DCOLOR keyboardColor = D3DCOLOR_ARGB(255, 0, 0, 0);
+    D3DCOLOR mouseColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     std::wstringstream keyboardStream;
     bool hasKeyboardInput = false;
 
@@ -184,6 +189,7 @@ void DrawInputStatus()
         else if (SKeyBoard::IsDownFirstFrame(keyCode))
         {
             keyboardStream << L"+First";
+            keyboardColor = D3DCOLOR_ARGB(255, 0, 160, 0);
         }
         keyboardStream << L")";
 
@@ -196,18 +202,81 @@ void DrawInputStatus()
     }
 
     _snwprintf_s(msg, 256, _TRUNCATE, L"%s", keyboardStream.str().c_str());
-    TextDraw(g_pFont, msg, 20, 90);
+    TextDraw(g_pFont, msg, 20, 90, keyboardColor);
 
     _tcscpy_s(msg, 256, _T("Mouse: Left / Right / Middle"));
     TextDraw(g_pFont, msg, 20, 140);
 
+    if (Mouse::IsDown(0))
+    {
+        if (Mouse::IsHold(0))
+        {
+            _tcscpy_s(leftMouseStatus, 32, _T("Down+Hold"));
+        }
+        else if (Mouse::IsDownFirstFrame(0))
+        {
+            _tcscpy_s(leftMouseStatus, 32, _T("Down+First"));
+            mouseColor = D3DCOLOR_ARGB(255, 0, 160, 0);
+        }
+        else
+        {
+            _tcscpy_s(leftMouseStatus, 32, _T("Down"));
+        }
+    }
+    else
+    {
+        _tcscpy_s(leftMouseStatus, 32, _T("Up"));
+    }
+
+    if (Mouse::IsDown(1))
+    {
+        if (Mouse::IsHold(1))
+        {
+            _tcscpy_s(rightMouseStatus, 32, _T("Down+Hold"));
+        }
+        else if (Mouse::IsDownFirstFrame(1))
+        {
+            _tcscpy_s(rightMouseStatus, 32, _T("Down+First"));
+            mouseColor = D3DCOLOR_ARGB(255, 0, 160, 0);
+        }
+        else
+        {
+            _tcscpy_s(rightMouseStatus, 32, _T("Down"));
+        }
+    }
+    else
+    {
+        _tcscpy_s(rightMouseStatus, 32, _T("Up"));
+    }
+
+    if (Mouse::IsDown(2))
+    {
+        if (Mouse::IsHold(2))
+        {
+            _tcscpy_s(middleMouseStatus, 32, _T("Down+Hold"));
+        }
+        else if (Mouse::IsDownFirstFrame(2))
+        {
+            _tcscpy_s(middleMouseStatus, 32, _T("Down+First"));
+            mouseColor = D3DCOLOR_ARGB(255, 0, 160, 0);
+        }
+        else
+        {
+            _tcscpy_s(middleMouseStatus, 32, _T("Down"));
+        }
+    }
+    else
+    {
+        _tcscpy_s(middleMouseStatus, 32, _T("Up"));
+    }
+
     _stprintf_s(msg,
                 256,
                 _T("L:%s  R:%s  M:%s"),
-                Mouse::IsDown(0) ? _T("Down") : _T("Up"),
-                Mouse::IsDown(1) ? _T("Down") : _T("Up"),
-                Mouse::IsDown(2) ? _T("Down") : _T("Up"));
-    TextDraw(g_pFont, msg, 20, 170);
+                leftMouseStatus,
+                rightMouseStatus,
+                middleMouseStatus);
+    TextDraw(g_pFont, msg, 20, 170, mouseColor);
 }
 
 std::wstring KeyCodeToString(int keyCode)
