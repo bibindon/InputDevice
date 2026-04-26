@@ -37,6 +37,7 @@ bool g_bClose = false;
 static void TextDraw(LPD3DXFONT pFont, TCHAR* text, int X, int Y, D3DCOLOR color = D3DCOLOR_ARGB(255, 0, 0, 0));
 static void DrawInputStatus();
 static void SetGamePadButtonStatus(GamePadButton button, TCHAR* status, std::size_t statusSize, D3DCOLOR* color);
+static void SetGamePadXButtonStatus(GamePadButton button, TCHAR* status, std::size_t statusSize, D3DCOLOR* color);
 static std::wstring KeyCodeToString(int keyCode);
 static float GetFps();
 static void InitD3D(HWND hWnd);
@@ -171,11 +172,28 @@ void DrawInputStatus()
     TCHAR gamePadR2Status[32];
     TCHAR gamePadL1Status[32];
     TCHAR gamePadL2Status[32];
+    TCHAR gamePadXInputUpStatus[32];
+    TCHAR gamePadXInputRightStatus[32];
+    TCHAR gamePadXInputDownStatus[32];
+    TCHAR gamePadXInputLeftStatus[32];
+    TCHAR gamePadXInputAStatus[32];
+    TCHAR gamePadXInputBStatus[32];
+    TCHAR gamePadXInputXStatus[32];
+    TCHAR gamePadXInputYStatus[32];
+    TCHAR gamePadXInputStartStatus[32];
+    TCHAR gamePadXInputBackStatus[32];
+    TCHAR gamePadXInputR1Status[32];
+    TCHAR gamePadXInputR2Status[32];
+    TCHAR gamePadXInputL1Status[32];
+    TCHAR gamePadXInputL2Status[32];
     GamePadStick stickL = GamePad_D::GetStickL();
     GamePadStick stickR = GamePad_D::GetStickR();
+    GamePadStick stickXL = GamePad_X::GetStickL();
+    GamePadStick stickXR = GamePad_X::GetStickR();
     D3DCOLOR keyboardColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     D3DCOLOR mouseColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     D3DCOLOR gamePadColor = D3DCOLOR_ARGB(255, 0, 0, 0);
+    D3DCOLOR gamePadXColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     std::wstring keyboardText;
     bool hasKeyboardInput = false;
 
@@ -377,6 +395,87 @@ void DrawInputStatus()
                 stickR.power,
                 stickR.angle);
     TextDraw(g_pFont, msg, 20, 550, gamePadColor);
+
+    _tcscpy_s(msg, 256, _T("GamePad_X: D-Pad"));
+    TextDraw(g_pFont, msg, 820, 220);
+
+    SetGamePadXButtonStatus(GAMEPAD_POV_UP, gamePadXInputUpStatus, 32, &gamePadXColor);
+    SetGamePadXButtonStatus(GAMEPAD_POV_RIGHT, gamePadXInputRightStatus, 32, &gamePadXColor);
+    SetGamePadXButtonStatus(GAMEPAD_POV_DOWN, gamePadXInputDownStatus, 32, &gamePadXColor);
+    SetGamePadXButtonStatus(GAMEPAD_POV_LEFT, gamePadXInputLeftStatus, 32, &gamePadXColor);
+
+    _stprintf_s(msg,
+                256,
+                _T("Up:%s  Right:%s  Down:%s  Left:%s"),
+                gamePadXInputUpStatus,
+                gamePadXInputRightStatus,
+                gamePadXInputDownStatus,
+                gamePadXInputLeftStatus);
+    TextDraw(g_pFont, msg, 820, 250, gamePadXColor);
+
+    _tcscpy_s(msg, 256, _T("GamePad_X: X / Y / A / B"));
+    TextDraw(g_pFont, msg, 820, 300);
+
+    SetGamePadXButtonStatus(GAMEPAD_A, gamePadXInputAStatus, 32, &gamePadXColor);
+    SetGamePadXButtonStatus(GAMEPAD_B, gamePadXInputBStatus, 32, &gamePadXColor);
+    SetGamePadXButtonStatus(GAMEPAD_X, gamePadXInputXStatus, 32, &gamePadXColor);
+    SetGamePadXButtonStatus(GAMEPAD_Y, gamePadXInputYStatus, 32, &gamePadXColor);
+
+    _stprintf_s(msg,
+                256,
+                _T("X:%s  Y:%s  A:%s  B:%s"),
+                gamePadXInputXStatus,
+                gamePadXInputYStatus,
+                gamePadXInputAStatus,
+                gamePadXInputBStatus);
+    TextDraw(g_pFont, msg, 820, 330, gamePadXColor);
+
+    _tcscpy_s(msg, 256, _T("GamePad_X: START / BACK / R1 / R2 / L1 / L2"));
+    TextDraw(g_pFont, msg, 820, 380);
+
+    SetGamePadXButtonStatus(GAMEPAD_START, gamePadXInputStartStatus, 32, &gamePadXColor);
+    SetGamePadXButtonStatus(GAMEPAD_BACK, gamePadXInputBackStatus, 32, &gamePadXColor);
+    SetGamePadXButtonStatus(GAMEPAD_R1, gamePadXInputR1Status, 32, &gamePadXColor);
+    SetGamePadXButtonStatus(GAMEPAD_R2, gamePadXInputR2Status, 32, &gamePadXColor);
+    SetGamePadXButtonStatus(GAMEPAD_L1, gamePadXInputL1Status, 32, &gamePadXColor);
+    SetGamePadXButtonStatus(GAMEPAD_L2, gamePadXInputL2Status, 32, &gamePadXColor);
+
+    _stprintf_s(msg,
+                256,
+                _T("START:%s  BACK:%s"),
+                gamePadXInputStartStatus,
+                gamePadXInputBackStatus);
+    TextDraw(g_pFont, msg, 820, 410, gamePadXColor);
+
+    _stprintf_s(msg,
+                256,
+                _T("R1:%s  R2:%s  L1:%s  L2:%s"),
+                gamePadXInputR1Status,
+                gamePadXInputR2Status,
+                gamePadXInputL1Status,
+                gamePadXInputL2Status);
+    TextDraw(g_pFont, msg, 820, 440, gamePadXColor);
+
+    _tcscpy_s(msg, 256, _T("GamePad_X: Stick"));
+    TextDraw(g_pFont, msg, 820, 490);
+
+    _stprintf_s(msg,
+                256,
+                _T("L Stick: x:% .2f  y:% .2f  power:%.2f  angle:% .2f"),
+                stickXL.x,
+                stickXL.y,
+                stickXL.power,
+                stickXL.angle);
+    TextDraw(g_pFont, msg, 820, 520, gamePadXColor);
+
+    _stprintf_s(msg,
+                256,
+                _T("R Stick: x:% .2f  y:% .2f  power:%.2f  angle:% .2f"),
+                stickXR.x,
+                stickXR.y,
+                stickXR.power,
+                stickXR.angle);
+    TextDraw(g_pFont, msg, 820, 550, gamePadXColor);
 }
 
 void SetGamePadButtonStatus(GamePadButton button, TCHAR* status, std::size_t statusSize, D3DCOLOR* color)
@@ -388,6 +487,30 @@ void SetGamePadButtonStatus(GamePadButton button, TCHAR* status, std::size_t sta
             _tcscpy_s(status, statusSize, _T("Down+Hold"));
         }
         else if (GamePad_D::IsDownFirstFrame(button))
+        {
+            _tcscpy_s(status, statusSize, _T("Down+First"));
+            *color = D3DCOLOR_ARGB(255, 0, 160, 0);
+        }
+        else
+        {
+            _tcscpy_s(status, statusSize, _T("Down"));
+        }
+    }
+    else
+    {
+        _tcscpy_s(status, statusSize, _T("Up"));
+    }
+}
+
+void SetGamePadXButtonStatus(GamePadButton button, TCHAR* status, std::size_t statusSize, D3DCOLOR* color)
+{
+    if (GamePad_X::IsDown(button))
+    {
+        if (GamePad_X::IsHold(button))
+        {
+            _tcscpy_s(status, statusSize, _T("Down+Hold"));
+        }
+        else if (GamePad_X::IsDownFirstFrame(button))
         {
             _tcscpy_s(status, statusSize, _T("Down+First"));
             *color = D3DCOLOR_ARGB(255, 0, 160, 0);

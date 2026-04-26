@@ -166,6 +166,25 @@ public:
 private:
 };
 
+// こちらはXInput
+// 末尾のXが目印
+class GamePad_X
+{
+public:
+    static bool Initialize();
+    static bool Finalize();
+    static bool Update();
+
+    static bool IsDown(GamePadButton button);
+    static bool IsDownFirstFrame(GamePadButton button);
+    static bool IsHold(GamePadButton button);
+    static bool IsUp(GamePadButton button);
+    static GamePadStick GetStickL();
+    static GamePadStick GetStickR();
+
+private:
+};
+
 class UnifiedInput
 {
 public:

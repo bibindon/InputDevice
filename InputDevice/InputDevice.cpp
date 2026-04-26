@@ -1,9 +1,11 @@
 ﻿#include "InputDevice.h"
 #include <cmath>
 #include <string>
+#include <Xinput.h>
 
 #pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
+#pragma comment(lib, "Xinput.lib")
 
 namespace InputDevice
 {
@@ -24,13 +26,19 @@ namespace
     std::deque<std::vector<BYTE>> g_gamePadButtonDeque;
     std::deque<DWORD> g_gamePadPOVDeque;
     ULONGLONG g_lastGamePadSearchTime = 0;
+    XINPUT_STATE g_gamePadXState = { };
+    XINPUT_STATE g_gamePadXPrevState = { };
+    std::deque<std::vector<BYTE>> g_gamePadXButtonDeque;
+    bool g_gamePadXConnected = false;
     constexpr std::size_t kMouseButtonCount = 8;
     constexpr std::size_t kGamePadButtonCount = 128;
+    constexpr std::size_t kGamePadXButtonStateCount = 132;
     constexpr std::size_t kHoldFrameCount = 30;
     constexpr std::size_t kInputHistoryFrameCount = 60 * 5;
     constexpr LONG kGamePadAxisMin = -1000;
     constexpr LONG kGamePadAxisMax = 1000;
     constexpr float kGamePadStickDeadZone = 0.05f;
+    constexpr BYTE kGamePadXTriggerThreshold = 30;
     constexpr ULONGLONG kGamePadSearchIntervalMilliseconds = 5000;
 
     bool IsValidMouseButtonIndex(char key)
@@ -42,6 +50,12 @@ namespace
     {
         int buttonIndex = static_cast<int>(button);
         return 0 <= buttonIndex && static_cast<std::size_t>(buttonIndex) < kGamePadButtonCount;
+    }
+
+    bool IsValidGamePadXButtonStateIndex(GamePadButton button)
+    {
+        int buttonIndex = static_cast<int>(button);
+        return 0 <= buttonIndex && static_cast<std::size_t>(buttonIndex) < kGamePadXButtonStateCount;
     }
 
     bool IsGamePadPOVButton(GamePadButton button)
@@ -118,6 +132,113 @@ namespace
         stick.angle = std::atan2(stick.y, stick.x);
         stick.angle = ApplyGamePadStickDeadZone(stick.angle);
         return stick;
+    }
+
+    LONG ConvertXInputAxisToGamePadAxis(SHORT axis)
+    {
+        float value = static_cast<float>(axis) / 32767.0f;
+        value = ClampFloat(value, -1.0f, 1.0f);
+        return static_cast<LONG>(value * static_cast<float>(kGamePadAxisMax));
+    }
+
+    bool IsGamePadXButtonPressed(GamePadButton button, const XINPUT_STATE& state)
+    {
+        WORD buttons = state.Gamepad.wButtons;
+
+        if (button == GAMEPAD_A)
+        {
+            return (buttons & XINPUT_GAMEPAD_A) != 0;
+        }
+
+        if (button == GAMEPAD_B)
+        {
+            return (buttons & XINPUT_GAMEPAD_B) != 0;
+        }
+
+        if (button == GAMEPAD_X)
+        {
+            return (buttons & XINPUT_GAMEPAD_X) != 0;
+        }
+
+        if (button == GAMEPAD_Y)
+        {
+            return (buttons & XINPUT_GAMEPAD_Y) != 0;
+        }
+
+        if (button == GAMEPAD_L1)
+        {
+            return (buttons & XINPUT_GAMEPAD_LEFT_SHOULDER) != 0;
+        }
+
+        if (button == GAMEPAD_R1)
+        {
+            return (buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER) != 0;
+        }
+
+        if (button == GAMEPAD_L2)
+        {
+            return kGamePadXTriggerThreshold <= state.Gamepad.bLeftTrigger;
+        }
+
+        if (button == GAMEPAD_R2)
+        {
+            return kGamePadXTriggerThreshold <= state.Gamepad.bRightTrigger;
+        }
+
+        if (button == GAMEPAD_BACK)
+        {
+            return (buttons & XINPUT_GAMEPAD_BACK) != 0;
+        }
+
+        if (button == GAMEPAD_START)
+        {
+            return (buttons & XINPUT_GAMEPAD_START) != 0;
+        }
+
+        if (button == GAMEPAD_POV_UP)
+        {
+            return (buttons & XINPUT_GAMEPAD_DPAD_UP) != 0;
+        }
+
+        if (button == GAMEPAD_POV_RIGHT)
+        {
+            return (buttons & XINPUT_GAMEPAD_DPAD_RIGHT) != 0;
+        }
+
+        if (button == GAMEPAD_POV_DOWN)
+        {
+            return (buttons & XINPUT_GAMEPAD_DPAD_DOWN) != 0;
+        }
+
+        if (button == GAMEPAD_POV_LEFT)
+        {
+            return (buttons & XINPUT_GAMEPAD_DPAD_LEFT) != 0;
+        }
+
+        return false;
+    }
+
+    void SetGamePadXButtonState(std::vector<BYTE>* buttonState, GamePadButton button)
+    {
+        if (buttonState == nullptr)
+        {
+            return;
+        }
+
+        if (!IsValidGamePadXButtonStateIndex(button))
+        {
+            return;
+        }
+
+        std::size_t index = static_cast<std::size_t>(button);
+        if (IsGamePadXButtonPressed(button, g_gamePadXState))
+        {
+            buttonState->at(index) = 0x80;
+        }
+        else
+        {
+            buttonState->at(index) = 0x00;
+        }
     }
 
     void SetGamePadAxisRange(DWORD objectOffset)
@@ -975,6 +1096,164 @@ GamePadStick GamePad_D::GetStickR()
     return CreateGamePadStick(g_gamePadState.lZ, g_gamePadState.lRz);
 }
 
+bool GamePad_X::Initialize()
+{
+    ZeroMemory(&g_gamePadXState, sizeof(g_gamePadXState));
+    ZeroMemory(&g_gamePadXPrevState, sizeof(g_gamePadXPrevState));
+    g_gamePadXButtonDeque.clear();
+
+    DWORD ret = XInputGetState(0, &g_gamePadXState);
+    if (ret == ERROR_SUCCESS)
+    {
+        g_gamePadXConnected = true;
+        return true;
+    }
+
+    g_gamePadXConnected = false;
+    ZeroMemory(&g_gamePadXState, sizeof(g_gamePadXState));
+    return false;
+}
+
+bool GamePad_X::Finalize()
+{
+    ZeroMemory(&g_gamePadXState, sizeof(g_gamePadXState));
+    ZeroMemory(&g_gamePadXPrevState, sizeof(g_gamePadXPrevState));
+    g_gamePadXConnected = false;
+
+    std::deque<std::vector<BYTE>> emptyDeque;
+    g_gamePadXButtonDeque.swap(emptyDeque);
+
+    return true;
+}
+
+bool GamePad_X::Update()
+{
+    memcpy(&g_gamePadXPrevState, &g_gamePadXState, sizeof(g_gamePadXState));
+    ZeroMemory(&g_gamePadXState, sizeof(g_gamePadXState));
+
+    DWORD ret = XInputGetState(0, &g_gamePadXState);
+    if (ret != ERROR_SUCCESS)
+    {
+        g_gamePadXConnected = false;
+        ZeroMemory(&g_gamePadXState, sizeof(g_gamePadXState));
+        return false;
+    }
+
+    g_gamePadXConnected = true;
+
+    std::vector<BYTE> temp(kGamePadXButtonStateCount);
+    SetGamePadXButtonState(&temp, GAMEPAD_X);
+    SetGamePadXButtonState(&temp, GAMEPAD_A);
+    SetGamePadXButtonState(&temp, GAMEPAD_B);
+    SetGamePadXButtonState(&temp, GAMEPAD_Y);
+    SetGamePadXButtonState(&temp, GAMEPAD_L1);
+    SetGamePadXButtonState(&temp, GAMEPAD_R1);
+    SetGamePadXButtonState(&temp, GAMEPAD_L2);
+    SetGamePadXButtonState(&temp, GAMEPAD_R2);
+    SetGamePadXButtonState(&temp, GAMEPAD_BACK);
+    SetGamePadXButtonState(&temp, GAMEPAD_START);
+    SetGamePadXButtonState(&temp, GAMEPAD_POV_UP);
+    SetGamePadXButtonState(&temp, GAMEPAD_POV_RIGHT);
+    SetGamePadXButtonState(&temp, GAMEPAD_POV_DOWN);
+    SetGamePadXButtonState(&temp, GAMEPAD_POV_LEFT);
+    g_gamePadXButtonDeque.push_front(temp);
+
+    if (g_gamePadXButtonDeque.size() >= kInputHistoryFrameCount)
+    {
+        g_gamePadXButtonDeque.erase(g_gamePadXButtonDeque.begin() + kInputHistoryFrameCount,
+                                    g_gamePadXButtonDeque.end());
+    }
+
+    return true;
+}
+
+bool GamePad_X::IsDown(GamePadButton button)
+{
+    if (!g_gamePadXConnected)
+    {
+        return false;
+    }
+
+    return IsGamePadXButtonPressed(button, g_gamePadXState);
+}
+
+bool GamePad_X::IsDownFirstFrame(GamePadButton button)
+{
+    if (!g_gamePadXConnected)
+    {
+        return false;
+    }
+
+    bool isDown = IsGamePadXButtonPressed(button, g_gamePadXState);
+    bool wasDown = IsGamePadXButtonPressed(button, g_gamePadXPrevState);
+    return isDown && !wasDown;
+}
+
+bool GamePad_X::IsHold(GamePadButton button)
+{
+    if (!g_gamePadXConnected)
+    {
+        return false;
+    }
+
+    if (!IsValidGamePadXButtonStateIndex(button))
+    {
+        return false;
+    }
+
+    if (g_gamePadXButtonDeque.size() <= kHoldFrameCount)
+    {
+        return false;
+    }
+
+    std::size_t index = static_cast<std::size_t>(button);
+    for (std::size_t i = 0; i < kHoldFrameCount; ++i)
+    {
+        if ((g_gamePadXButtonDeque.at(i).at(index) & 0x80) == 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool GamePad_X::IsUp(GamePadButton button)
+{
+    if (!g_gamePadXConnected)
+    {
+        return true;
+    }
+
+    return !IsGamePadXButtonPressed(button, g_gamePadXState);
+}
+
+GamePadStick GamePad_X::GetStickL()
+{
+    if (!g_gamePadXConnected)
+    {
+        GamePadStick stick = { };
+        return stick;
+    }
+
+    LONG x = ConvertXInputAxisToGamePadAxis(g_gamePadXState.Gamepad.sThumbLX);
+    LONG y = -ConvertXInputAxisToGamePadAxis(g_gamePadXState.Gamepad.sThumbLY);
+    return CreateGamePadStick(x, y);
+}
+
+GamePadStick GamePad_X::GetStickR()
+{
+    if (!g_gamePadXConnected)
+    {
+        GamePadStick stick = { };
+        return stick;
+    }
+
+    LONG x = ConvertXInputAxisToGamePadAxis(g_gamePadXState.Gamepad.sThumbRX);
+    LONG y = -ConvertXInputAxisToGamePadAxis(g_gamePadXState.Gamepad.sThumbRY);
+    return CreateGamePadStick(x, y);
+}
+
 // モックキーボードクラスを使いたい場合は、
 // この関数を呼ばずに、
 // IKeyBoardクラスを継承した独自のクラスを作って
@@ -994,6 +1273,7 @@ void Initialize(HINSTANCE hInstance, HWND hWnd)
     g_keyboardOwnedByLibrary = true;
     Mouse::Initialize();
     GamePad_D::Initialize();
+    GamePad_X::Initialize();
 }
 
 void Update()
@@ -1001,10 +1281,12 @@ void Update()
     SKeyBoard::Update();
     Mouse::Update();
     GamePad_D::Update();
+    GamePad_X::Update();
 }
 
 void Finalize()
 {
+    GamePad_X::Finalize();
     GamePad_D::Finalize();
     Mouse::Finalize();
 
