@@ -30,6 +30,8 @@ namespace
     XINPUT_STATE g_gamePadXPrevState = { };
     std::deque<std::vector<BYTE>> g_gamePadXButtonDeque;
     bool g_gamePadXConnected = false;
+    GamePad_D g_gamePadD;
+    GamePad_X g_gamePadX;
     constexpr std::size_t kMouseButtonCount = 8;
     constexpr std::size_t kGamePadButtonCount = 128;
     constexpr std::size_t kGamePadXButtonStateCount = 132;
@@ -941,7 +943,7 @@ bool GamePad_D::Update()
         if (g_lastGamePadSearchTime == 0 ||
             currentTime - g_lastGamePadSearchTime >= kGamePadSearchIntervalMilliseconds)
         {
-            GamePad_D::Initialize();
+            g_gamePadD.Initialize();
         }
 
         return false;
@@ -1254,6 +1256,16 @@ GamePadStick GamePad_X::GetStickR()
     return CreateGamePadStick(x, y);
 }
 
+IGamePad* GetGamePadD()
+{
+    return &g_gamePadD;
+}
+
+IGamePad* GetGamePadX()
+{
+    return &g_gamePadX;
+}
+
 // モックキーボードクラスを使いたい場合は、
 // この関数を呼ばずに、
 // IKeyBoardクラスを継承した独自のクラスを作って
@@ -1272,22 +1284,22 @@ void Initialize(HINSTANCE hInstance, HWND hWnd)
     SKeyBoard::Set(keyboard);
     g_keyboardOwnedByLibrary = true;
     Mouse::Initialize();
-    GamePad_D::Initialize();
-    GamePad_X::Initialize();
+    g_gamePadD.Initialize();
+    g_gamePadX.Initialize();
 }
 
 void Update()
 {
     SKeyBoard::Update();
     Mouse::Update();
-    GamePad_D::Update();
-    GamePad_X::Update();
+    g_gamePadD.Update();
+    g_gamePadX.Update();
 }
 
 void Finalize()
 {
-    GamePad_X::Finalize();
-    GamePad_D::Finalize();
+    g_gamePadX.Finalize();
+    g_gamePadD.Finalize();
     Mouse::Finalize();
 
     IKeyBoard* keyboard = SKeyBoard::Get();

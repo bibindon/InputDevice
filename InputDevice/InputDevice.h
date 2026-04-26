@@ -149,41 +149,60 @@ struct GamePadStick
     float angle;
 };
 
-class GamePad_D
+class IGamePad
 {
 public:
-    static bool Initialize();
-    static bool Finalize();
-    static bool Update();
+    virtual ~IGamePad() = default;
+    virtual bool Initialize() = 0;
+    virtual bool Finalize() = 0;
+    virtual bool Update() = 0;
 
-    static bool IsDown(GamePadButton button);
-    static bool IsDownFirstFrame(GamePadButton button);
-    static bool IsHold(GamePadButton button);
-    static bool IsUp(GamePadButton button);
-    static GamePadStick GetStickL();
-    static GamePadStick GetStickR();
+    virtual bool IsDown(GamePadButton button) = 0;
+    virtual bool IsDownFirstFrame(GamePadButton button) = 0;
+    virtual bool IsHold(GamePadButton button) = 0;
+    virtual bool IsUp(GamePadButton button) = 0;
+    virtual GamePadStick GetStickL() = 0;
+    virtual GamePadStick GetStickR() = 0;
+};
+
+class GamePad_D : public IGamePad
+{
+public:
+    bool Initialize() override;
+    bool Finalize() override;
+    bool Update() override;
+
+    bool IsDown(GamePadButton button) override;
+    bool IsDownFirstFrame(GamePadButton button) override;
+    bool IsHold(GamePadButton button) override;
+    bool IsUp(GamePadButton button) override;
+    GamePadStick GetStickL() override;
+    GamePadStick GetStickR() override;
 
 private:
 };
 
 // こちらはXInput
 // 末尾のXが目印
-class GamePad_X
+class GamePad_X : public IGamePad
 {
 public:
-    static bool Initialize();
-    static bool Finalize();
-    static bool Update();
+    bool Initialize() override;
+    bool Finalize() override;
+    bool Update() override;
 
-    static bool IsDown(GamePadButton button);
-    static bool IsDownFirstFrame(GamePadButton button);
-    static bool IsHold(GamePadButton button);
-    static bool IsUp(GamePadButton button);
-    static GamePadStick GetStickL();
-    static GamePadStick GetStickR();
+    bool IsDown(GamePadButton button) override;
+    bool IsDownFirstFrame(GamePadButton button) override;
+    bool IsHold(GamePadButton button) override;
+    bool IsUp(GamePadButton button) override;
+    GamePadStick GetStickL() override;
+    GamePadStick GetStickR() override;
 
 private:
 };
+
+IGamePad* GetGamePadD();
+IGamePad* GetGamePadX();
 
 // キーボード、マウス、ゲームパッドを意識しなくてよい入力用クラス。
 // 例えば、IsDown(GAMEPAD_POV_UP)を実行すると
@@ -201,7 +220,9 @@ public:
     static bool IsHold(GamePadButton button);
     static bool IsUp(GamePadButton button);
 
-    //
+    // キーボードのWを押しているとき、
+    // ゲームパッドのスティックを上に最大まで倒しているのと
+    // 同じ結果が返ってくる。
     static GamePadStick GetStickL();
     static GamePadStick GetStickR();
 
