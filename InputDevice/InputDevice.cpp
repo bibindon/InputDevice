@@ -11,7 +11,20 @@ IKeyBoard* SKeyBoard::m_keyboard = nullptr;
 namespace
 {
     LPDIRECTINPUT8 g_directInput = nullptr;
+    HWND g_inputHWnd = nullptr;
     bool g_keyboardOwnedByLibrary = false;
+    LPDIRECTINPUTDEVICE8 g_mouse = nullptr;
+    DIMOUSESTATE2 g_mouseState = { };
+    DIMOUSESTATE2 g_mousePrevState = { };
+    std::deque<std::vector<BYTE>> g_mouseButtonDeque;
+    constexpr std::size_t kMouseButtonCount = 8;
+    constexpr std::size_t kHoldFrameCount = 30;
+    constexpr std::size_t kInputHistoryFrameCount = 60 * 5;
+
+    bool IsValidMouseButtonIndex(char key)
+    {
+        return 0 <= key && key < static_cast<char>(kMouseButtonCount);
+    }
 }
 
 void KeyBoard::Initialize(LPDIRECTINPUT8 directInput, HWND hWnd)
@@ -185,34 +198,245 @@ bool KeyBoard::IsHold(int keyCode)
     return isHold;
 }
 
+void MockKeyBoard::Initialize(LPDIRECTINPUT8 directInput, HWND hWnd)
+{
+    UNREFERENCED_PARAMETER(directInput);
+    UNREFERENCED_PARAMETER(hWnd);
+
+    ZeroMemory(m_key, sizeof(m_key));
+    ZeroMemory(m_keyPrev, sizeof(m_keyPrev));
+    m_keyDeque.clear();
+}
+
+void MockKeyBoard::Update()
+{
+    memcpy(m_keyPrev, m_key, sizeof(m_key));
+
+    std::vector<BYTE> temp(256);
+    std::copy(&m_key[0], &m_key[256], temp.begin());
+    m_keyDeque.push_front(temp);
+
+    if (m_keyDeque.size() >= 60 * 5)
+    {
+        m_keyDeque.erase(m_keyDeque.begin() + 60 * 5, m_keyDeque.end());
+    }
+}
+
+void MockKeyBoard::Finalize()
+{
+    ClearAllKeys();
+    ZeroMemory(m_keyPrev, sizeof(m_keyPrev));
+    m_keyDeque.clear();
+}
+
+bool MockKeyBoard::IsDown(int keyCode)
+{
+    if (m_key[keyCode] & 0x80)
+    {
+        return true;
+    }
+    return false;
+}
+
+bool MockKeyBoard::IsDownFirstFrame(int keyCode)
+{
+    if (m_key[keyCode] & 0x80)
+    {
+        if ((m_keyPrev[keyCode] & 0x80) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool MockKeyBoard::IsHold(int keyCode)
+{
+    if (m_keyDeque.size() <= 30)
+    {
+        return false;
+    }
+
+    bool isHold = true;
+    for (std::size_t i = 0; i < 30; ++i)
+    {
+        if (m_keyDeque.at(i).at((std::size_t)keyCode) & 0x80)
+        {
+            continue;
+        }
+        else
+        {
+            isHold = false;
+            break;
+        }
+    }
+
+    if (isHold)
+    {
+        return true;
+    }
+
+    return isHold;
+}
+
+void MockKeyBoard::SetKeyDown(int keyCode, bool isDown)
+{
+    m_key[keyCode] = isDown ? 0x80 : 0x00;
+}
+
+void MockKeyBoard::ClearAllKeys()
+{
+    ZeroMemory(m_key, sizeof(m_key));
+}
+
 bool Mouse::Initialize()
 {
-    return false;
+    if (g_directInput == nullptr || g_inputHWnd == nullptr)
+    {
+        return false;
+    }
+
+    if (g_mouse != nullptr)
+    {
+        return true;
+    }
+
+    ZeroMemory(&g_mouseState, sizeof(g_mouseState));
+    ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
+    g_mouseButtonDeque.clear();
+
+    HRESULT ret = g_directInput->CreateDevice(GUID_SysMouse, &g_mouse, NULL);
+    if (FAILED(ret))
+    {
+        g_mouse = nullptr;
+        return false;
+    }
+
+    ret = g_mouse->SetDataFormat(&c_dfDIMouse2);
+    if (FAILED(ret))
+    {
+        g_mouse->Release();
+        g_mouse = nullptr;
+        return false;
+    }
+
+    ret = g_mouse->SetCooperativeLevel(g_inputHWnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
+    if (FAILED(ret))
+    {
+        g_mouse->Release();
+        g_mouse = nullptr;
+        return false;
+    }
+
+    ret = g_mouse->Acquire();
+    if (FAILED(ret))
+    {
+        g_mouse->Release();
+        g_mouse = nullptr;
+        return false;
+    }
+
+    return true;
 }
 
 bool Mouse::Finalize()
 {
-    return false;
+    g_mouseButtonDeque.clear();
+    ZeroMemory(&g_mouseState, sizeof(g_mouseState));
+    ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
+
+    if (g_mouse != nullptr)
+    {
+        g_mouse->Unacquire();
+        g_mouse->Release();
+        g_mouse = nullptr;
+    }
+
+    return true;
 }
 
 bool Mouse::Update()
 {
-    return false;
+    if (g_mouse == nullptr)
+    {
+        return false;
+    }
+
+    memcpy(&g_mousePrevState, &g_mouseState, sizeof(g_mouseState));
+    ZeroMemory(&g_mouseState, sizeof(g_mouseState));
+
+    HRESULT ret = g_mouse->GetDeviceState(sizeof(g_mouseState), &g_mouseState);
+    if (FAILED(ret))
+    {
+        ret = g_mouse->Acquire();
+        if (FAILED(ret))
+        {
+            return false;
+        }
+
+        ret = g_mouse->GetDeviceState(sizeof(g_mouseState), &g_mouseState);
+        if (FAILED(ret))
+        {
+            return false;
+        }
+    }
+
+    std::vector<BYTE> temp(kMouseButtonCount);
+    std::copy(&g_mouseState.rgbButtons[0],
+              &g_mouseState.rgbButtons[kMouseButtonCount],
+              temp.begin());
+    g_mouseButtonDeque.push_front(temp);
+
+    if (g_mouseButtonDeque.size() >= kInputHistoryFrameCount)
+    {
+        g_mouseButtonDeque.erase(g_mouseButtonDeque.begin() + kInputHistoryFrameCount,
+                                 g_mouseButtonDeque.end());
+    }
+
+    return true;
 }
 
 bool Mouse::IsDown(const char key)
 {
-    return false;
+    if (!IsValidMouseButtonIndex(key))
+    {
+        return false;
+    }
+
+    return (g_mouseState.rgbButtons[(std::size_t)key] & 0x80) != 0;
 }
 
 bool Mouse::IsHold(const char key)
 {
-    return false;
+    if (!IsValidMouseButtonIndex(key))
+    {
+        return false;
+    }
+
+    if (g_mouseButtonDeque.size() <= kHoldFrameCount)
+    {
+        return false;
+    }
+
+    for (std::size_t i = 0; i < kHoldFrameCount; ++i)
+    {
+        if ((g_mouseButtonDeque.at(i).at((std::size_t)key) & 0x80) == 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool Mouse::IsUp(const char key)
 {
-    return false;
+    if (!IsValidMouseButtonIndex(key))
+    {
+        return false;
+    }
+
+    return (g_mouseState.rgbButtons[(std::size_t)key] & 0x80) == 0;
 }
 
 bool GamePad::Initialize()
@@ -258,13 +482,17 @@ void InitializeInputDevice(HINSTANCE hInstance, HWND hWnd)
                                     (void**)&g_directInput,
                                     NULL);
 
+    g_inputHWnd = hWnd;
     keyboard->Initialize(g_directInput, hWnd);
     SKeyBoard::Set(keyboard);
     g_keyboardOwnedByLibrary = true;
+    Mouse::Initialize();
 }
 
 void FinalizeInputDevice()
 {
+    Mouse::Finalize();
+
     IKeyBoard* keyboard = SKeyBoard::Get();
     if (keyboard != nullptr && g_keyboardOwnedByLibrary)
     {
@@ -279,6 +507,8 @@ void FinalizeInputDevice()
         g_directInput->Release();
         g_directInput = nullptr;
     }
+
+    g_inputHWnd = nullptr;
 }
 
 }

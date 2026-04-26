@@ -60,6 +60,26 @@ private:
     std::deque<std::vector<BYTE>> m_keyDeque;
 };
 
+class MockKeyBoard : public IKeyBoard
+{
+public:
+    void Initialize(LPDIRECTINPUT8 directInput, HWND hWnd);
+    void Update();
+    void Finalize();
+
+    bool IsDown(int keyCode);
+    bool IsDownFirstFrame(int keyCode);
+    bool IsHold(int keyCode);
+
+    void SetKeyDown(int keyCode, bool isDown);
+    void ClearAllKeys();
+
+private:
+    BYTE m_key[256];
+    BYTE m_keyPrev[256];
+    std::deque<std::vector<BYTE>> m_keyDeque;
+};
+
 // 楽に使用するためのstaticクラス
 class SKeyBoard
 {
