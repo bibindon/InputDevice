@@ -12,8 +12,9 @@
 namespace InputDevice
 {
 
-void InitializeInputDevice(HINSTANCE hInstance, HWND hWnd);
-void FinalizeInputDevice();
+void Initialize(HINSTANCE hInstance, HWND hWnd);
+void Update();
+void Finalize();
 
 // テストコードでモックキーボードクラスを作って使いたい。
 // そのために継承を使う。

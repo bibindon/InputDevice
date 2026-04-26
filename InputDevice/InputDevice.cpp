@@ -492,7 +492,7 @@ bool GamePad::IsUp(const char key)
 // この関数を呼ばずに、
 // IKeyBoardクラスを継承した独自のクラスを作って
 // SKeyBoard::Set関数に渡せばよい
-void InitializeInputDevice(HINSTANCE hInstance, HWND hWnd)
+void Initialize(HINSTANCE hInstance, HWND hWnd)
 {
     IKeyBoard* keyboard = new KeyBoard();
     HRESULT hr = DirectInput8Create(hInstance,
@@ -508,7 +508,13 @@ void InitializeInputDevice(HINSTANCE hInstance, HWND hWnd)
     Mouse::Initialize();
 }
 
-void FinalizeInputDevice()
+void Update()
+{
+    SKeyBoard::Update();
+    Mouse::Update();
+}
+
+void Finalize()
 {
     Mouse::Finalize();
 

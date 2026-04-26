@@ -98,7 +98,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
     UpdateWindow(hWnd);
 
     InitD3D(hWnd);
-    InitializeInputDevice(hInstance, hWnd);
+    Initialize(hInstance, hWnd);
 
     MSG msg;
 
@@ -112,10 +112,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
         {
             Sleep(16);
 
-            // キーボード、マウス、ゲームパッドを
-            // まとめてアップデートするUpdateInputDevice関数を作るべきなきがする
-            SKeyBoard::Update();
-            Mouse::Update();
+            Update();
             Render();
         }
 
@@ -125,7 +122,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
         }
     }
 
-    FinalizeInputDevice();
+    Finalize();
     Cleanup();
     timeEndPeriod(1);
 
@@ -486,6 +483,12 @@ void Cleanup()
     {
         SAFE_RELEASE(texture);
     }
+
+    g_pTextures.clear();
+    g_pTextures.shrink_to_fit();
+    g_pMaterials.clear();
+    g_pMaterials.shrink_to_fit();
+    g_dwNumMaterials = 0;
 
     SAFE_RELEASE(g_pMesh);
     SAFE_RELEASE(g_pEffect);
