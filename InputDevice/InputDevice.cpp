@@ -21,10 +21,12 @@ namespace
     DIJOYSTATE2 g_gamePadState = { };
     DIJOYSTATE2 g_gamePadPrevState = { };
     std::deque<std::vector<BYTE>> g_gamePadButtonDeque;
+    ULONGLONG g_lastGamePadSearchTime = 0;
     constexpr std::size_t kMouseButtonCount = 8;
     constexpr std::size_t kGamePadButtonCount = 128;
     constexpr std::size_t kHoldFrameCount = 30;
     constexpr std::size_t kInputHistoryFrameCount = 60 * 5;
+    constexpr ULONGLONG kGamePadSearchIntervalMilliseconds = 5000;
 
     bool IsValidMouseButtonIndex(char key)
     {
@@ -509,6 +511,7 @@ bool GamePad_D::Initialize()
     ZeroMemory(&g_gamePadState, sizeof(g_gamePadState));
     ZeroMemory(&g_gamePadPrevState, sizeof(g_gamePadPrevState));
     g_gamePadButtonDeque.clear();
+    g_lastGamePadSearchTime = GetTickCount64();
 
     HRESULT ret = g_directInput->EnumDevices(DI8DEVCLASS_GAMECTRL,
                                              EnumGamePadCallback,
@@ -549,6 +552,7 @@ bool GamePad_D::Finalize()
 {
     ZeroMemory(&g_gamePadState, sizeof(g_gamePadState));
     ZeroMemory(&g_gamePadPrevState, sizeof(g_gamePadPrevState));
+    g_lastGamePadSearchTime = 0;
 
     std::deque<std::vector<BYTE>> emptyDeque;
     g_gamePadButtonDeque.swap(emptyDeque);
@@ -567,6 +571,13 @@ bool GamePad_D::Update()
 {
     if (g_gamePad == nullptr)
     {
+        ULONGLONG currentTime = GetTickCount64();
+        if (g_lastGamePadSearchTime == 0 ||
+            currentTime - g_lastGamePadSearchTime >= kGamePadSearchIntervalMilliseconds)
+        {
+            GamePad_D::Initialize();
+        }
+
         return false;
     }
 
