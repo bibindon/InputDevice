@@ -771,6 +771,8 @@ bool Mouse::Initialize()
     ZeroMemory(&g_mouseState, sizeof(g_mouseState));
     ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
     g_mousePosition = { };
+    g_mousePrevPosition = { };
+    g_mouseDelta = { };
     g_mouseButtonDeque.clear();
 
     HRESULT ret = g_directInput->CreateDevice(GUID_SysMouse, &g_mouse, NULL);
@@ -811,6 +813,8 @@ bool Mouse::Finalize()
     ZeroMemory(&g_mouseState, sizeof(g_mouseState));
     ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
     g_mousePosition = { };
+    g_mousePrevPosition = { };
+    g_mouseDelta = { };
 
     std::deque<std::vector<BYTE>> emptyDeque;
     g_mouseButtonDeque.swap(emptyDeque);
@@ -831,10 +835,8 @@ bool Mouse::Update()
     g_mousePrevPosition = g_mousePosition;
 
     UpdateMousePosition();
-
-    // 差分を計算
-    g_mouseDelta.x = g_mousePosition.x - g_mousePrevPosition.x;
-    g_mouseDelta.y = g_mousePosition.y - g_mousePrevPosition.y;
+    g_mouseDelta.x = 0;
+    g_mouseDelta.y = 0;
 
     if (g_mouse == nullptr)
     {
@@ -859,6 +861,10 @@ bool Mouse::Update()
             return false;
         }
     }
+
+    // Delta はカーソル座標差分ではなく DirectInput の移動量を使う。
+    g_mouseDelta.x = g_mouseState.lX;
+    g_mouseDelta.y = g_mouseState.lY;
 
     std::vector<BYTE> temp(kMouseButtonCount);
     std::copy(&g_mouseState.rgbButtons[0],
@@ -941,14 +947,18 @@ MousePosition Mouse::GetDelta(GamePadStick* stick)
     if (stick != nullptr)
     {
         float dx = static_cast<float>(g_mouseDelta.x);
-        float dy = -static_cast<float>(g_mouseDelta.y); // マウス座標は下方向が正、スティックは上方向が正
+
+        // マウス座標は下方向が正、スティックは上方向が正
+        float dy = -static_cast<float>(g_mouseDelta.y);
         
         float magnitude = std::sqrt(dx * dx + dy * dy);
         
         if (magnitude > 0.0f)
         {
             float power = 0.f;
-            power = magnitude / 5.0f; // 50ピクセルを最大倒れ具合として扱う
+
+            // 5ピクセルをpower 1.0の基準として扱う
+            power = magnitude / 5.0f;
             
             stick->x = (dx / magnitude) * power;
             stick->y = (dy / magnitude) * power;
@@ -1574,4 +1584,3 @@ bool UnifiedInput::IsUp(GamePadButton button)
 }
 
 }
-
