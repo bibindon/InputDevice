@@ -1,4 +1,5 @@
 ﻿#include "InputDevice.h"
+#include <cmath>
 #include <string>
 
 #pragma comment(lib, "dinput8.lib")
@@ -27,6 +28,9 @@ namespace
     constexpr std::size_t kGamePadButtonCount = 128;
     constexpr std::size_t kHoldFrameCount = 30;
     constexpr std::size_t kInputHistoryFrameCount = 60 * 5;
+    constexpr LONG kGamePadAxisMin = -1000;
+    constexpr LONG kGamePadAxisMax = 1000;
+    constexpr float kGamePadStickDeadZone = 0.05f;
     constexpr ULONGLONG kGamePadSearchIntervalMilliseconds = 5000;
 
     bool IsValidMouseButtonIndex(char key)
@@ -63,6 +67,76 @@ namespace
         }
 
         return false;
+    }
+
+    float ClampFloat(float value, float minValue, float maxValue)
+    {
+        if (value < minValue)
+        {
+            return minValue;
+        }
+
+        if (maxValue < value)
+        {
+            return maxValue;
+        }
+
+        return value;
+    }
+
+    float NormalizeGamePadAxis(LONG axis)
+    {
+        float value = static_cast<float>(axis) / static_cast<float>(kGamePadAxisMax);
+        return ClampFloat(value, -1.0f, 1.0f);
+    }
+
+    float ApplyGamePadStickDeadZone(float value)
+    {
+        if (-kGamePadStickDeadZone <= value && value <= kGamePadStickDeadZone)
+        {
+            return 0.0f;
+        }
+
+        return value;
+    }
+
+    GamePadStick CreateGamePadStick(LONG xAxis, LONG yAxis)
+    {
+        GamePadStick stick = { };
+        stick.x = ApplyGamePadStickDeadZone(NormalizeGamePadAxis(xAxis));
+        stick.y = ApplyGamePadStickDeadZone(-NormalizeGamePadAxis(yAxis));
+
+        stick.power = std::sqrt((stick.x * stick.x) + (stick.y * stick.y));
+        stick.power = ClampFloat(stick.power, 0.0f, 1.0f);
+
+        if (stick.power <= 0.0f)
+        {
+            stick.angle = 0.0f;
+            return stick;
+        }
+
+        stick.angle = std::atan2(stick.y, stick.x);
+        stick.angle = ApplyGamePadStickDeadZone(stick.angle);
+        return stick;
+    }
+
+    void SetGamePadAxisRange(DWORD objectOffset)
+    {
+        if (g_gamePad == nullptr)
+        {
+            return;
+        }
+
+        DIPROPRANGE range;
+        ZeroMemory(&range, sizeof(range));
+        range.diph.dwSize = sizeof(range);
+        range.diph.dwHeaderSize = sizeof(range.diph);
+        range.diph.dwObj = objectOffset;
+        range.diph.dwHow = DIPH_BYOFFSET;
+        range.lMin = kGamePadAxisMin;
+        range.lMax = kGamePadAxisMax;
+
+        g_gamePad->SetProperty(DIPROP_RANGE, &range.diph);
     }
 
     bool IsGamePadPOVPressed(DWORD pov, DWORD minValue, DWORD maxValue)
@@ -693,6 +767,11 @@ bool GamePad_D::Initialize()
         return false;
     }
 
+    SetGamePadAxisRange(DIJOFS_X);
+    SetGamePadAxisRange(DIJOFS_Y);
+    SetGamePadAxisRange(DIJOFS_Z);
+    SetGamePadAxisRange(DIJOFS_RZ);
+
     ret = g_gamePad->SetCooperativeLevel(g_inputHWnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
     if (FAILED(ret))
     {
@@ -874,6 +953,28 @@ bool GamePad_D::IsUp(GamePadButton button)
     return (g_gamePadState.rgbButtons[(std::size_t)button] & 0x80) == 0;
 }
 
+GamePadStick GamePad_D::GetStickL()
+{
+    if (g_gamePad == nullptr)
+    {
+        GamePadStick stick = { };
+        return stick;
+    }
+
+    return CreateGamePadStick(g_gamePadState.lX, g_gamePadState.lY);
+}
+
+GamePadStick GamePad_D::GetStickR()
+{
+    if (g_gamePad == nullptr)
+    {
+        GamePadStick stick = { };
+        return stick;
+    }
+
+    return CreateGamePadStick(g_gamePadState.lZ, g_gamePadState.lRz);
+}
+
 // モックキーボードクラスを使いたい場合は、
 // この関数を呼ばずに、
 // IKeyBoardクラスを継承した独自のクラスを作って
@@ -923,6 +1024,41 @@ void Finalize()
     }
 
     g_inputHWnd = nullptr;
+}
+
+bool UnifiedInput::Initialize()
+{
+    return false;
+}
+
+bool UnifiedInput::Finalize()
+{
+    return false;
+}
+
+bool UnifiedInput::Update()
+{
+    return false;
+}
+
+bool UnifiedInput::IsDown(GamePadButton button)
+{
+    return false;
+}
+
+bool UnifiedInput::IsDownFirstFrame(GamePadButton button)
+{
+    return false;
+}
+
+bool UnifiedInput::IsHold(GamePadButton button)
+{
+    return false;
+}
+
+bool UnifiedInput::IsUp(GamePadButton button)
+{
+    return false;
 }
 
 }

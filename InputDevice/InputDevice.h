@@ -138,7 +138,35 @@ enum GamePadButton
     GAMEPAD_POV_LEFT = 131,
 };
 
+struct GamePadStick
+{
+    // x/yは-1.0～1.0。yは上方向をプラスとして扱う。
+    float x;
+    float y;
+    // powerは倒れ具合。0.0～1.0。
+    float power;
+    // angleは方向角。右が0、上が約1.57ラジアン。
+    float angle;
+};
+
 class GamePad_D
+{
+public:
+    static bool Initialize();
+    static bool Finalize();
+    static bool Update();
+
+    static bool IsDown(GamePadButton button);
+    static bool IsDownFirstFrame(GamePadButton button);
+    static bool IsHold(GamePadButton button);
+    static bool IsUp(GamePadButton button);
+    static GamePadStick GetStickL();
+    static GamePadStick GetStickR();
+
+private:
+};
+
+class UnifiedInput
 {
 public:
     static bool Initialize();
@@ -152,6 +180,7 @@ public:
 
 private:
 };
+
 
 }
 

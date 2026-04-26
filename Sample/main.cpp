@@ -171,6 +171,8 @@ void DrawInputStatus()
     TCHAR gamePadR2Status[32];
     TCHAR gamePadL1Status[32];
     TCHAR gamePadL2Status[32];
+    GamePadStick stickL = GamePad_D::GetStickL();
+    GamePadStick stickR = GamePad_D::GetStickR();
     D3DCOLOR keyboardColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     D3DCOLOR mouseColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     D3DCOLOR gamePadColor = D3DCOLOR_ARGB(255, 0, 0, 0);
@@ -354,6 +356,27 @@ void DrawInputStatus()
                 gamePadL1Status,
                 gamePadL2Status);
     TextDraw(g_pFont, msg, 20, 440, gamePadColor);
+
+    _tcscpy_s(msg, 256, _T("GamePad: Stick"));
+    TextDraw(g_pFont, msg, 20, 490);
+
+    _stprintf_s(msg,
+                256,
+                _T("L Stick: x:% .2f  y:% .2f  power:%.2f  angle:% .2f"),
+                stickL.x,
+                stickL.y,
+                stickL.power,
+                stickL.angle);
+    TextDraw(g_pFont, msg, 20, 520, gamePadColor);
+
+    _stprintf_s(msg,
+                256,
+                _T("R Stick: x:% .2f  y:% .2f  power:%.2f  angle:% .2f"),
+                stickR.x,
+                stickR.y,
+                stickR.power,
+                stickR.angle);
+    TextDraw(g_pFont, msg, 20, 550, gamePadColor);
 }
 
 void SetGamePadButtonStatus(GamePadButton button, TCHAR* status, std::size_t statusSize, D3DCOLOR* color)
