@@ -108,6 +108,7 @@ struct MousePosition
     long y;
 };
 
+struct GamePadStick;
 class Mouse
 {
 public:
@@ -120,6 +121,7 @@ public:
     static bool IsHold(const char key);
     static bool IsUp(const char key);
     static MousePosition GetPosition();
+    static MousePosition GetDelta(GamePadStick* stick = nullptr); // 前フレームからの移動量
 
 private:
 };

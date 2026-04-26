@@ -158,6 +158,8 @@ void DrawInputStatus()
     TCHAR rightMouseStatus[32];
     TCHAR middleMouseStatus[32];
     MousePosition mousePosition = Mouse::GetPosition();
+    GamePadStick gamePadStick;
+    MousePosition mouseDelta = Mouse::GetDelta(&gamePadStick);
     TCHAR gamePadUpStatus[32];
     TCHAR gamePadRightStatus[32];
     TCHAR gamePadDownStatus[32];
@@ -226,6 +228,15 @@ void DrawInputStatus()
 
     _stprintf_s(msg, 256, _T("Mouse: Left / Right / Middle  x:%ld  y:%ld"), mousePosition.x, mousePosition.y);
     TextDraw(g_pFont, msg, 20, 140);
+
+    _stprintf_s(msg, 256, _T("Mouse Delta: x:%ld  y:%ld stick x:%.2f stick y:%.2f stick power:%.2f, stick angle:%.2f"),
+                mouseDelta.x,
+                mouseDelta.y,
+                gamePadStick.x,
+                gamePadStick.y,
+                gamePadStick.power,
+                gamePadStick.angle );
+    TextDraw(g_pFont, msg, 20, 160);
 
     if (Mouse::IsDown(0))
     {
@@ -296,7 +307,7 @@ void DrawInputStatus()
                 leftMouseStatus,
                 rightMouseStatus,
                 middleMouseStatus);
-    TextDraw(g_pFont, msg, 20, 170, mouseColor);
+    TextDraw(g_pFont, msg, 20, 180, mouseColor);
 
     _tcscpy_s(msg, 256, _T("GamePad: D-Pad"));
     TextDraw(g_pFont, msg, 20, 220);

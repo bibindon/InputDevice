@@ -20,6 +20,8 @@ namespace
     DIMOUSESTATE2 g_mouseState = { };
     DIMOUSESTATE2 g_mousePrevState = { };
     MousePosition g_mousePosition = { };
+    MousePosition g_mousePrevPosition = { };
+    MousePosition g_mouseDelta = { };
     std::deque<std::vector<BYTE>> g_mouseButtonDeque;
     LPDIRECTINPUTDEVICE8 g_gamePad = nullptr;
     DIJOYSTATE2 g_gamePadState = { };
@@ -825,7 +827,14 @@ bool Mouse::Finalize()
 
 bool Mouse::Update()
 {
+    // 前回の位置を保存
+    g_mousePrevPosition = g_mousePosition;
+
     UpdateMousePosition();
+
+    // 差分を計算
+    g_mouseDelta.x = g_mousePosition.x - g_mousePrevPosition.x;
+    g_mouseDelta.y = g_mousePosition.y - g_mousePrevPosition.y;
 
     if (g_mouse == nullptr)
     {
@@ -925,6 +934,37 @@ bool Mouse::IsUp(const char key)
 MousePosition Mouse::GetPosition()
 {
     return g_mousePosition;
+}
+
+MousePosition Mouse::GetDelta(GamePadStick* stick)
+{
+    if (stick != nullptr)
+    {
+        float dx = static_cast<float>(g_mouseDelta.x);
+        float dy = -static_cast<float>(g_mouseDelta.y); // マウス座標は下方向が正、スティックは上方向が正
+        
+        float magnitude = std::sqrt(dx * dx + dy * dy);
+        
+        if (magnitude > 0.0f)
+        {
+            float power = 0.f;
+            power = magnitude / 5.0f; // 50ピクセルを最大倒れ具合として扱う
+            
+            stick->x = (dx / magnitude) * power;
+            stick->y = (dy / magnitude) * power;
+            stick->power = power;
+            stick->angle = std::atan2(stick->y, stick->x);
+        }
+        else
+        {
+            stick->x = 0.0f;
+            stick->y = 0.0f;
+            stick->power = 0.0f;
+            stick->angle = 0.0f;
+        }
+    }
+    
+    return g_mouseDelta;
 }
 
 bool GamePad_D::Initialize()
