@@ -204,6 +204,25 @@ private:
 IGamePad* GetGamePadD();
 IGamePad* GetGamePadX();
 
+// DirectInput/XInputの違いを意識せずに使うためのstaticクラス。
+// 両方有効ならXInputを優先する。
+class GamePad
+{
+public:
+    static bool Initialize();
+    static bool Finalize();
+    static bool Update();
+
+    static bool IsDown(GamePadButton button);
+    static bool IsDownFirstFrame(GamePadButton button);
+    static bool IsHold(GamePadButton button);
+    static bool IsUp(GamePadButton button);
+    static GamePadStick GetStickL();
+    static GamePadStick GetStickR();
+
+private:
+};
+
 // キーボード、マウス、ゲームパッドを意識しなくてよい入力用クラス。
 // 例えば、IsDown(GAMEPAD_POV_UP)を実行すると
 // ゲームパッドの十字キーの上を押されているときにtrueが返ってくるが

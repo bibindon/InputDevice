@@ -220,6 +220,21 @@ namespace
         return false;
     }
 
+    IGamePad* GetActiveGamePad()
+    {
+        if (g_gamePadXConnected)
+        {
+            return &g_gamePadX;
+        }
+
+        if (g_gamePad != nullptr)
+        {
+            return &g_gamePadD;
+        }
+
+        return nullptr;
+    }
+
     void SetGamePadXButtonState(std::vector<BYTE>* buttonState, GamePadButton button)
     {
         if (buttonState == nullptr)
@@ -260,6 +275,25 @@ namespace
         range.lMax = kGamePadAxisMax;
 
         g_gamePad->SetProperty(DIPROP_RANGE, &range.diph);
+    }
+
+    void ReleaseGamePadDDevice()
+    {
+        ZeroMemory(&g_gamePadState, sizeof(g_gamePadState));
+        ZeroMemory(&g_gamePadPrevState, sizeof(g_gamePadPrevState));
+
+        std::deque<std::vector<BYTE>> emptyButtonDeque;
+        g_gamePadButtonDeque.swap(emptyButtonDeque);
+
+        std::deque<DWORD> emptyPOVDeque;
+        g_gamePadPOVDeque.swap(emptyPOVDeque);
+
+        if (g_gamePad != nullptr)
+        {
+            g_gamePad->Unacquire();
+            g_gamePad->Release();
+            g_gamePad = nullptr;
+        }
     }
 
     bool IsGamePadPOVPressed(DWORD pov, DWORD minValue, DWORD maxValue)
@@ -915,22 +949,8 @@ bool GamePad_D::Initialize()
 
 bool GamePad_D::Finalize()
 {
-    ZeroMemory(&g_gamePadState, sizeof(g_gamePadState));
-    ZeroMemory(&g_gamePadPrevState, sizeof(g_gamePadPrevState));
     g_lastGamePadSearchTime = 0;
-
-    std::deque<std::vector<BYTE>> emptyDeque;
-    g_gamePadButtonDeque.swap(emptyDeque);
-
-    std::deque<DWORD> emptyPOVDeque;
-    g_gamePadPOVDeque.swap(emptyPOVDeque);
-
-    if (g_gamePad != nullptr)
-    {
-        g_gamePad->Unacquire();
-        g_gamePad->Release();
-        g_gamePad = nullptr;
-    }
+    ReleaseGamePadDDevice();
 
     return true;
 }
@@ -958,6 +978,7 @@ bool GamePad_D::Update()
         ret = g_gamePad->Acquire();
         if (FAILED(ret))
         {
+            ReleaseGamePadDDevice();
             return false;
         }
     }
@@ -968,12 +989,14 @@ bool GamePad_D::Update()
         ret = g_gamePad->Acquire();
         if (FAILED(ret))
         {
+            ReleaseGamePadDDevice();
             return false;
         }
 
         ret = g_gamePad->GetDeviceState(sizeof(g_gamePadState), &g_gamePadState);
         if (FAILED(ret))
         {
+            ReleaseGamePadDDevice();
             return false;
         }
     }
@@ -1264,6 +1287,123 @@ IGamePad* GetGamePadD()
 IGamePad* GetGamePadX()
 {
     return &g_gamePadX;
+}
+
+bool GamePad::Initialize()
+{
+    bool isDirectInputInitialized = g_gamePadD.Initialize();
+    bool isXInputInitialized = g_gamePadX.Initialize();
+
+    if (isXInputInitialized)
+    {
+        return true;
+    }
+
+    if (isDirectInputInitialized)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+bool GamePad::Finalize()
+{
+    bool isXInputFinalized = g_gamePadX.Finalize();
+    bool isDirectInputFinalized = g_gamePadD.Finalize();
+
+    if (isXInputFinalized && isDirectInputFinalized)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+bool GamePad::Update()
+{
+    bool isDirectInputUpdated = g_gamePadD.Update();
+    bool isXInputUpdated = g_gamePadX.Update();
+
+    if (isXInputUpdated)
+    {
+        return true;
+    }
+
+    if (isDirectInputUpdated)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+bool GamePad::IsDown(GamePadButton button)
+{
+    IGamePad* gamePad = GetActiveGamePad();
+    if (gamePad == nullptr)
+    {
+        return false;
+    }
+
+    return gamePad->IsDown(button);
+}
+
+bool GamePad::IsDownFirstFrame(GamePadButton button)
+{
+    IGamePad* gamePad = GetActiveGamePad();
+    if (gamePad == nullptr)
+    {
+        return false;
+    }
+
+    return gamePad->IsDownFirstFrame(button);
+}
+
+bool GamePad::IsHold(GamePadButton button)
+{
+    IGamePad* gamePad = GetActiveGamePad();
+    if (gamePad == nullptr)
+    {
+        return false;
+    }
+
+    return gamePad->IsHold(button);
+}
+
+bool GamePad::IsUp(GamePadButton button)
+{
+    IGamePad* gamePad = GetActiveGamePad();
+    if (gamePad == nullptr)
+    {
+        return true;
+    }
+
+    return gamePad->IsUp(button);
+}
+
+GamePadStick GamePad::GetStickL()
+{
+    IGamePad* gamePad = GetActiveGamePad();
+    if (gamePad == nullptr)
+    {
+        GamePadStick stick = { };
+        return stick;
+    }
+
+    return gamePad->GetStickL();
+}
+
+GamePadStick GamePad::GetStickR()
+{
+    IGamePad* gamePad = GetActiveGamePad();
+    if (gamePad == nullptr)
+    {
+        GamePadStick stick = { };
+        return stick;
+    }
+
+    return gamePad->GetStickR();
 }
 
 // モックキーボードクラスを使いたい場合は、
