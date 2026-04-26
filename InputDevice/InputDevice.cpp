@@ -331,9 +331,8 @@ bool Mouse::Initialize()
     ret = g_mouse->Acquire();
     if (FAILED(ret))
     {
-        g_mouse->Release();
-        g_mouse = nullptr;
-        return false;
+        ZeroMemory(&g_mouseState, sizeof(g_mouseState));
+        ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
     }
 
     return true;

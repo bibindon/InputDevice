@@ -94,12 +94,11 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
                              wc.hInstance,
                              NULL);
 
-    InitD3D(hWnd);
-
-    InitializeInputDevice(hInstance, hWnd);
-
     ShowWindow(hWnd, SW_SHOWDEFAULT);
     UpdateWindow(hWnd);
+
+    InitD3D(hWnd);
+    InitializeInputDevice(hInstance, hWnd);
 
     MSG msg;
 
@@ -175,18 +174,18 @@ void DrawInputStatus()
         }
 
         keyboardStream << KeyCodeToString(keyCode);
+        keyboardStream << L"(";
+        keyboardStream << L"Down";
+
         if (SKeyBoard::IsHold(keyCode))
         {
-            keyboardStream << L"(Hold)";
+            keyboardStream << L"+Hold";
         }
         else if (SKeyBoard::IsDownFirstFrame(keyCode))
         {
-            keyboardStream << L"(First)";
+            keyboardStream << L"+First";
         }
-        else
-        {
-            keyboardStream << L"(Down)";
-        }
+        keyboardStream << L")";
 
         hasKeyboardInput = true;
     }
