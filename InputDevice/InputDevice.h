@@ -185,6 +185,10 @@ public:
 private:
 };
 
+// キーボード、マウス、ゲームパッドを意識しなくてよい入力用クラス。
+// 例えば、IsDown(GAMEPAD_POV_UP)を実行すると
+// ゲームパッドの十字キーの上を押されているときにtrueが返ってくるが
+// キーボードのWを押していてもtrueが返ってくる。
 class UnifiedInput
 {
 public:
@@ -196,6 +200,10 @@ public:
     static bool IsDownFirstFrame(GamePadButton button);
     static bool IsHold(GamePadButton button);
     static bool IsUp(GamePadButton button);
+
+    //
+    static GamePadStick GetStickL();
+    static GamePadStick GetStickR();
 
 private:
 };
