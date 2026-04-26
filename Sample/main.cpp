@@ -157,6 +157,7 @@ void DrawInputStatus()
     TCHAR leftMouseStatus[32];
     TCHAR rightMouseStatus[32];
     TCHAR middleMouseStatus[32];
+    MousePosition mousePosition = Mouse::GetPosition();
     TCHAR gamePadUpStatus[32];
     TCHAR gamePadRightStatus[32];
     TCHAR gamePadDownStatus[32];
@@ -223,7 +224,7 @@ void DrawInputStatus()
     _snwprintf_s(msg, 256, _TRUNCATE, L"%s", keyboardText.c_str());
     TextDraw(g_pFont, msg, 20, 90, keyboardColor);
 
-    _tcscpy_s(msg, 256, _T("Mouse: Left / Right / Middle"));
+    _stprintf_s(msg, 256, _T("Mouse: Left / Right / Middle  x:%ld  y:%ld"), mousePosition.x, mousePosition.y);
     TextDraw(g_pFont, msg, 20, 140);
 
     if (Mouse::IsDown(0))

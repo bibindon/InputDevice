@@ -19,6 +19,7 @@ namespace
     LPDIRECTINPUTDEVICE8 g_mouse = nullptr;
     DIMOUSESTATE2 g_mouseState = { };
     DIMOUSESTATE2 g_mousePrevState = { };
+    MousePosition g_mousePosition = { };
     std::deque<std::vector<BYTE>> g_mouseButtonDeque;
     LPDIRECTINPUTDEVICE8 g_gamePad = nullptr;
     DIJOYSTATE2 g_gamePadState = { };
@@ -46,6 +47,34 @@ namespace
     bool IsValidMouseButtonIndex(char key)
     {
         return 0 <= key && key < static_cast<char>(kMouseButtonCount);
+    }
+
+    void UpdateMousePosition()
+    {
+        if (g_inputHWnd == nullptr)
+        {
+            g_mousePosition.x = 0;
+            g_mousePosition.y = 0;
+            return;
+        }
+
+        POINT cursorPosition = { };
+        if (!GetCursorPos(&cursorPosition))
+        {
+            g_mousePosition.x = 0;
+            g_mousePosition.y = 0;
+            return;
+        }
+
+        if (!ScreenToClient(g_inputHWnd, &cursorPosition))
+        {
+            g_mousePosition.x = 0;
+            g_mousePosition.y = 0;
+            return;
+        }
+
+        g_mousePosition.x = cursorPosition.x;
+        g_mousePosition.y = cursorPosition.y;
     }
 
     bool IsValidGamePadButtonIndex(GamePadButton button)
@@ -739,6 +768,7 @@ bool Mouse::Initialize()
 
     ZeroMemory(&g_mouseState, sizeof(g_mouseState));
     ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
+    g_mousePosition = { };
     g_mouseButtonDeque.clear();
 
     HRESULT ret = g_directInput->CreateDevice(GUID_SysMouse, &g_mouse, NULL);
@@ -778,6 +808,7 @@ bool Mouse::Finalize()
 {
     ZeroMemory(&g_mouseState, sizeof(g_mouseState));
     ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
+    g_mousePosition = { };
 
     std::deque<std::vector<BYTE>> emptyDeque;
     g_mouseButtonDeque.swap(emptyDeque);
@@ -794,6 +825,8 @@ bool Mouse::Finalize()
 
 bool Mouse::Update()
 {
+    UpdateMousePosition();
+
     if (g_mouse == nullptr)
     {
         return false;
@@ -887,6 +920,11 @@ bool Mouse::IsUp(const char key)
     }
 
     return (g_mouseState.rgbButtons[(std::size_t)key] & 0x80) == 0;
+}
+
+MousePosition Mouse::GetPosition()
+{
+    return g_mousePosition;
 }
 
 bool GamePad_D::Initialize()

@@ -102,6 +102,12 @@ private:
     static IKeyBoard* m_keyboard;
 };
 
+struct MousePosition
+{
+    long x;
+    long y;
+};
+
 class Mouse
 {
 public:
@@ -113,6 +119,7 @@ public:
     static bool IsDownFirstFrame(const char key);
     static bool IsHold(const char key);
     static bool IsUp(const char key);
+    static MousePosition GetPosition();
 
 private:
 };
