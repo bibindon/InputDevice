@@ -8,15 +8,19 @@
 #include <d3d9.h>
 #include <d3dx9.h>
 #include <string>
+#include <sstream>
 #include <tchar.h>
 #include <cassert>
 #include <crtdbg.h>
 #include <vector>
+#include <windows.h>
+#include <mmsystem.h>
 
 #include "../InputDevice/InputDevice.h"
 using namespace InputDevice;
 
 #define SAFE_RELEASE(p) { if (p) { (p)->Release(); (p) = NULL; } }
+#pragma comment(lib, "winmm.lib")
 
 const int WINDOW_SIZE_W = 1600;
 const int WINDOW_SIZE_H = 900;
@@ -32,6 +36,9 @@ LPD3DXEFFECT g_pEffect = NULL;
 bool g_bClose = false;
 
 static void TextDraw(LPD3DXFONT pFont, TCHAR* text, int X, int Y);
+static void DrawInputStatus();
+static std::wstring KeyCodeToString(int keyCode);
+static float GetFps();
 static void InitD3D(HWND hWnd);
 static void Cleanup();
 static void Render();
@@ -48,6 +55,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
                      _In_ int nCmdShow)
 {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+    timeBeginPeriod(1);
 
     WNDCLASSEX wc { };
     wc.cbSize = sizeof(WNDCLASSEX);
@@ -101,13 +109,14 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
         {
             DispatchMessage(&msg);
         }
-        else
+
         {
             Sleep(16);
 
             // キーボード、マウス、ゲームパッドを
             // まとめてアップデートするUpdateInputDevice関数を作るべきなきがする
             SKeyBoard::Update();
+            Mouse::Update();
             Render();
         }
 
@@ -119,6 +128,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
 
     FinalizeInputDevice();
     Cleanup();
+    timeEndPeriod(1);
 
     UnregisterClass(_T("Window1"), wc.hInstance);
     return 0;
@@ -138,6 +148,139 @@ void TextDraw(LPD3DXFONT pFont, TCHAR* text, int X, int Y)
                                       D3DCOLOR_ARGB(255, 0, 0, 0));
 
     assert((int)hResult >= 0);
+}
+
+void DrawInputStatus()
+{
+    TCHAR msg[256];
+    std::wstringstream keyboardStream;
+    bool hasKeyboardInput = false;
+
+    _stprintf_s(msg, 256, _T("FPS: %.2f"), GetFps());
+    TextDraw(g_pFont, msg, 20, 20);
+
+    _tcscpy_s(msg, 256, _T("Keyboard Input"));
+    TextDraw(g_pFont, msg, 20, 60);
+
+    for (int keyCode = 0; keyCode < 256; ++keyCode)
+    {
+        if (!SKeyBoard::IsDown(keyCode))
+        {
+            continue;
+        }
+
+        if (hasKeyboardInput)
+        {
+            keyboardStream << L", ";
+        }
+
+        keyboardStream << KeyCodeToString(keyCode);
+        if (SKeyBoard::IsHold(keyCode))
+        {
+            keyboardStream << L"(Hold)";
+        }
+        else if (SKeyBoard::IsDownFirstFrame(keyCode))
+        {
+            keyboardStream << L"(First)";
+        }
+        else
+        {
+            keyboardStream << L"(Down)";
+        }
+
+        hasKeyboardInput = true;
+    }
+
+    if (!hasKeyboardInput)
+    {
+        keyboardStream << L"None";
+    }
+
+    _snwprintf_s(msg, 256, _TRUNCATE, L"%s", keyboardStream.str().c_str());
+    TextDraw(g_pFont, msg, 20, 90);
+
+    _tcscpy_s(msg, 256, _T("Mouse: Left / Right / Middle"));
+    TextDraw(g_pFont, msg, 20, 140);
+
+    _stprintf_s(msg,
+                256,
+                _T("L:%s  R:%s  M:%s"),
+                Mouse::IsDown(0) ? _T("Down") : _T("Up"),
+                Mouse::IsDown(1) ? _T("Down") : _T("Up"),
+                Mouse::IsDown(2) ? _T("Down") : _T("Up"));
+    TextDraw(g_pFont, msg, 20, 170);
+}
+
+std::wstring KeyCodeToString(int keyCode)
+{
+    if (DIK_A <= keyCode && keyCode <= DIK_Z)
+    {
+        wchar_t ch = static_cast<wchar_t>(L'A' + (keyCode - DIK_A));
+        return std::wstring(1, ch);
+    }
+
+    if (DIK_0 <= keyCode && keyCode <= DIK_9)
+    {
+        wchar_t ch = static_cast<wchar_t>(L'0' + (keyCode - DIK_0));
+        return std::wstring(1, ch);
+    }
+
+    switch (keyCode)
+    {
+    case DIK_SPACE: return L"Space";
+    case DIK_RETURN: return L"Enter";
+    case DIK_ESCAPE: return L"Escape";
+    case DIK_TAB: return L"Tab";
+    case DIK_BACK: return L"Backspace";
+    case DIK_LSHIFT: return L"LShift";
+    case DIK_RSHIFT: return L"RShift";
+    case DIK_LCONTROL: return L"LCtrl";
+    case DIK_RCONTROL: return L"RCtrl";
+    case DIK_LALT: return L"LAlt";
+    case DIK_RALT: return L"RAlt";
+    case DIK_UP: return L"Up";
+    case DIK_DOWN: return L"Down";
+    case DIK_LEFT: return L"Left";
+    case DIK_RIGHT: return L"Right";
+    default:
+    {
+        wchar_t buffer[32];
+        _snwprintf_s(buffer, 32, _TRUNCATE, L"DIK_%d", keyCode);
+        return buffer;
+    }
+    }
+}
+
+float GetFps()
+{
+    static LARGE_INTEGER frequency = { };
+    static LARGE_INTEGER lastCounter = { };
+    static int frameCount = 0;
+    static float fps = 0.0f;
+
+    if (frequency.QuadPart == 0)
+    {
+        QueryPerformanceFrequency(&frequency);
+        QueryPerformanceCounter(&lastCounter);
+    }
+
+    ++frameCount;
+
+    LARGE_INTEGER currentCounter;
+    QueryPerformanceCounter(&currentCounter);
+
+    const double elapsedSeconds =
+        static_cast<double>(currentCounter.QuadPart - lastCounter.QuadPart) /
+        static_cast<double>(frequency.QuadPart);
+
+    if (elapsedSeconds >= 1.0)
+    {
+        fps = static_cast<float>(frameCount / elapsedSeconds);
+        frameCount = 0;
+        lastCounter = currentCounter;
+    }
+
+    return fps;
 }
 
 void InitD3D(HWND hWnd)
@@ -160,7 +303,7 @@ void InitD3D(HWND hWnd)
     d3dpp.hDeviceWindow = hWnd;
     d3dpp.Flags = 0;
     d3dpp.FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
-    d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
+    d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 
     hResult = g_pD3D->CreateDevice(D3DADAPTER_DEFAULT,
                                    D3DDEVTYPE_HAL,
@@ -321,24 +464,7 @@ void Render()
     hResult = g_pd3dDevice->BeginScene();
     assert(hResult == S_OK);
 
-    if (SKeyBoard::IsDown(DIK_A))
-    {
-        TCHAR msg[100];
-        _tcscpy_s(msg, 100, _T("A"));
-        TextDraw(g_pFont, msg, 0, 0);
-    }
-    else if (SKeyBoard::IsDown(DIK_B))
-    {
-        TCHAR msg[100];
-        _tcscpy_s(msg, 100, _T("B"));
-        TextDraw(g_pFont, msg, 0, 0);
-    }
-    else if (SKeyBoard::IsDown(DIK_C))
-    {
-        TCHAR msg[100];
-        _tcscpy_s(msg, 100, _T("C"));
-        TextDraw(g_pFont, msg, 0, 0);
-    }
+    DrawInputStatus();
 
     hResult = g_pEffect->SetTechnique("Technique1");
     assert(hResult == S_OK);
