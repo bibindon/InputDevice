@@ -125,6 +125,7 @@ public:
     static bool Update();
 
     static bool IsDown(const char key);
+    static bool IsDownFirstFrame(const char key);
     static bool IsHold(const char key);
     static bool IsUp(const char key);
 

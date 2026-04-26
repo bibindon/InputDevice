@@ -17,13 +17,42 @@ namespace
     DIMOUSESTATE2 g_mouseState = { };
     DIMOUSESTATE2 g_mousePrevState = { };
     std::deque<std::vector<BYTE>> g_mouseButtonDeque;
+    LPDIRECTINPUTDEVICE8 g_gamePad = nullptr;
+    DIJOYSTATE2 g_gamePadState = { };
+    DIJOYSTATE2 g_gamePadPrevState = { };
+    std::deque<std::vector<BYTE>> g_gamePadButtonDeque;
     constexpr std::size_t kMouseButtonCount = 8;
+    constexpr std::size_t kGamePadButtonCount = 128;
     constexpr std::size_t kHoldFrameCount = 30;
     constexpr std::size_t kInputHistoryFrameCount = 60 * 5;
 
     bool IsValidMouseButtonIndex(char key)
     {
         return 0 <= key && key < static_cast<char>(kMouseButtonCount);
+    }
+
+    bool IsValidGamePadButtonIndex(char key)
+    {
+        return 0 <= key && static_cast<unsigned char>(key) < kGamePadButtonCount;
+    }
+
+    BOOL CALLBACK EnumGamePadCallback(const DIDEVICEINSTANCE* instance, VOID* context)
+    {
+        UNREFERENCED_PARAMETER(context);
+
+        if (g_directInput == nullptr)
+        {
+            return DIENUM_STOP;
+        }
+
+        HRESULT ret = g_directInput->CreateDevice(instance->guidInstance, &g_gamePad, NULL);
+        if (FAILED(ret))
+        {
+            g_gamePad = nullptr;
+            return DIENUM_CONTINUE;
+        }
+
+        return DIENUM_STOP;
     }
 }
 
@@ -467,32 +496,178 @@ bool Mouse::IsUp(const char key)
 
 bool GamePad::Initialize()
 {
-    return false;
+    if (g_directInput == nullptr || g_inputHWnd == nullptr)
+    {
+        return false;
+    }
+
+    if (g_gamePad != nullptr)
+    {
+        return true;
+    }
+
+    ZeroMemory(&g_gamePadState, sizeof(g_gamePadState));
+    ZeroMemory(&g_gamePadPrevState, sizeof(g_gamePadPrevState));
+    g_gamePadButtonDeque.clear();
+
+    HRESULT ret = g_directInput->EnumDevices(DI8DEVCLASS_GAMECTRL,
+                                             EnumGamePadCallback,
+                                             NULL,
+                                             DIEDFL_ATTACHEDONLY);
+    if (FAILED(ret) || g_gamePad == nullptr)
+    {
+        return false;
+    }
+
+    ret = g_gamePad->SetDataFormat(&c_dfDIJoystick2);
+    if (FAILED(ret))
+    {
+        g_gamePad->Release();
+        g_gamePad = nullptr;
+        return false;
+    }
+
+    ret = g_gamePad->SetCooperativeLevel(g_inputHWnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
+    if (FAILED(ret))
+    {
+        g_gamePad->Release();
+        g_gamePad = nullptr;
+        return false;
+    }
+
+    ret = g_gamePad->Acquire();
+    if (FAILED(ret))
+    {
+        ZeroMemory(&g_gamePadState, sizeof(g_gamePadState));
+        ZeroMemory(&g_gamePadPrevState, sizeof(g_gamePadPrevState));
+    }
+
+    return true;
 }
 
 bool GamePad::Finalize()
 {
-    return false;
+    ZeroMemory(&g_gamePadState, sizeof(g_gamePadState));
+    ZeroMemory(&g_gamePadPrevState, sizeof(g_gamePadPrevState));
+
+    std::deque<std::vector<BYTE>> emptyDeque;
+    g_gamePadButtonDeque.swap(emptyDeque);
+
+    if (g_gamePad != nullptr)
+    {
+        g_gamePad->Unacquire();
+        g_gamePad->Release();
+        g_gamePad = nullptr;
+    }
+
+    return true;
 }
 
 bool GamePad::Update()
 {
-    return false;
+    if (g_gamePad == nullptr)
+    {
+        return false;
+    }
+
+    memcpy(&g_gamePadPrevState, &g_gamePadState, sizeof(g_gamePadState));
+    ZeroMemory(&g_gamePadState, sizeof(g_gamePadState));
+
+    HRESULT ret = g_gamePad->Poll();
+    if (FAILED(ret))
+    {
+        ret = g_gamePad->Acquire();
+        if (FAILED(ret))
+        {
+            return false;
+        }
+    }
+
+    ret = g_gamePad->GetDeviceState(sizeof(g_gamePadState), &g_gamePadState);
+    if (FAILED(ret))
+    {
+        ret = g_gamePad->Acquire();
+        if (FAILED(ret))
+        {
+            return false;
+        }
+
+        ret = g_gamePad->GetDeviceState(sizeof(g_gamePadState), &g_gamePadState);
+        if (FAILED(ret))
+        {
+            return false;
+        }
+    }
+
+    std::vector<BYTE> temp(kGamePadButtonCount);
+    std::copy(&g_gamePadState.rgbButtons[0],
+              &g_gamePadState.rgbButtons[kGamePadButtonCount],
+              temp.begin());
+    g_gamePadButtonDeque.push_front(temp);
+
+    if (g_gamePadButtonDeque.size() >= kInputHistoryFrameCount)
+    {
+        g_gamePadButtonDeque.erase(g_gamePadButtonDeque.begin() + kInputHistoryFrameCount,
+                                   g_gamePadButtonDeque.end());
+    }
+
+    return true;
 }
 
 bool GamePad::IsDown(const char key)
 {
-    return false;
+    if (!IsValidGamePadButtonIndex(key))
+    {
+        return false;
+    }
+
+    return (g_gamePadState.rgbButtons[(std::size_t)key] & 0x80) != 0;
+}
+
+bool GamePad::IsDownFirstFrame(const char key)
+{
+    if (!IsValidGamePadButtonIndex(key))
+    {
+        return false;
+    }
+
+    const std::size_t index = (std::size_t)key;
+    const bool isDown = (g_gamePadState.rgbButtons[index] & 0x80) != 0;
+    const bool wasDown = (g_gamePadPrevState.rgbButtons[index] & 0x80) != 0;
+    return isDown && !wasDown;
 }
 
 bool GamePad::IsHold(const char key)
 {
-    return false;
+    if (!IsValidGamePadButtonIndex(key))
+    {
+        return false;
+    }
+
+    if (g_gamePadButtonDeque.size() <= kHoldFrameCount)
+    {
+        return false;
+    }
+
+    for (std::size_t i = 0; i < kHoldFrameCount; ++i)
+    {
+        if ((g_gamePadButtonDeque.at(i).at((std::size_t)key) & 0x80) == 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool GamePad::IsUp(const char key)
 {
-    return false;
+    if (!IsValidGamePadButtonIndex(key))
+    {
+        return false;
+    }
+
+    return (g_gamePadState.rgbButtons[(std::size_t)key] & 0x80) == 0;
 }
 
 // モックキーボードクラスを使いたい場合は、
@@ -513,16 +688,19 @@ void Initialize(HINSTANCE hInstance, HWND hWnd)
     SKeyBoard::Set(keyboard);
     g_keyboardOwnedByLibrary = true;
     Mouse::Initialize();
+    GamePad::Initialize();
 }
 
 void Update()
 {
     SKeyBoard::Update();
     Mouse::Update();
+    GamePad::Update();
 }
 
 void Finalize()
 {
+    GamePad::Finalize();
     Mouse::Finalize();
 
     IKeyBoard* keyboard = SKeyBoard::Get();
