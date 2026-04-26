@@ -117,6 +117,9 @@ public:
 private:
 };
 
+// ゲームパッドにはDirectInputとXInputがある。
+// こちらはDirectInput
+// 末尾のDが目印
 class GamePad_D
 {
 public:
