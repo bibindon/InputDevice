@@ -120,6 +120,20 @@ private:
 // ゲームパッドにはDirectInputとXInputがある。
 // こちらはDirectInput
 // 末尾のDが目印
+enum GamePadButton
+{
+    GAMEPAD_X = 0,
+    GAMEPAD_A = 1,
+    GAMEPAD_B = 2,
+    GAMEPAD_Y = 3,
+    GAMEPAD_L1 = 4,
+    GAMEPAD_R1 = 5,
+    GAMEPAD_L2 = 6,
+    GAMEPAD_R2 = 7,
+    GAMEPAD_BACK = 8,
+    GAMEPAD_START = 9,
+};
+
 class GamePad_D
 {
 public:
@@ -127,10 +141,26 @@ public:
     static bool Finalize();
     static bool Update();
 
-    static bool IsDown(const char key);
-    static bool IsDownFirstFrame(const char key);
-    static bool IsHold(const char key);
-    static bool IsUp(const char key);
+    static bool IsDown(GamePadButton button);
+    static bool IsDownFirstFrame(GamePadButton button);
+    static bool IsHold(GamePadButton button);
+    static bool IsUp(GamePadButton button);
+    static bool IsPOVUp();
+    static bool IsPOVUpFirstFrame();
+    static bool IsPOVUpHold();
+    static bool IsPOVUpUp();
+    static bool IsPOVRight();
+    static bool IsPOVRightFirstFrame();
+    static bool IsPOVRightHold();
+    static bool IsPOVRightUp();
+    static bool IsPOVDown();
+    static bool IsPOVDownFirstFrame();
+    static bool IsPOVDownHold();
+    static bool IsPOVDownUp();
+    static bool IsPOVLeft();
+    static bool IsPOVLeftFirstFrame();
+    static bool IsPOVLeftHold();
+    static bool IsPOVLeftUp();
 
 private:
 };

@@ -21,6 +21,7 @@ namespace
     DIJOYSTATE2 g_gamePadState = { };
     DIJOYSTATE2 g_gamePadPrevState = { };
     std::deque<std::vector<BYTE>> g_gamePadButtonDeque;
+    std::deque<DWORD> g_gamePadPOVDeque;
     ULONGLONG g_lastGamePadSearchTime = 0;
     constexpr std::size_t kMouseButtonCount = 8;
     constexpr std::size_t kGamePadButtonCount = 128;
@@ -33,9 +34,70 @@ namespace
         return 0 <= key && key < static_cast<char>(kMouseButtonCount);
     }
 
-    bool IsValidGamePadButtonIndex(char key)
+    bool IsValidGamePadButtonIndex(GamePadButton button)
     {
-        return 0 <= key && static_cast<unsigned char>(key) < kGamePadButtonCount;
+        int buttonIndex = static_cast<int>(button);
+        return 0 <= buttonIndex && static_cast<std::size_t>(buttonIndex) < kGamePadButtonCount;
+    }
+
+    bool IsGamePadPOVPressed(DWORD pov, DWORD minValue, DWORD maxValue)
+    {
+        if (pov == 0xFFFFFFFF)
+        {
+            return false;
+        }
+
+        if (minValue <= maxValue)
+        {
+            if (minValue <= pov && pov <= maxValue)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        if (minValue <= pov || pov <= maxValue)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool IsGamePadCurrentPOVPressed(DWORD minValue, DWORD maxValue)
+    {
+        return IsGamePadPOVPressed(g_gamePadState.rgdwPOV[0], minValue, maxValue);
+    }
+
+    bool IsGamePadPrevPOVPressed(DWORD minValue, DWORD maxValue)
+    {
+        return IsGamePadPOVPressed(g_gamePadPrevState.rgdwPOV[0], minValue, maxValue);
+    }
+
+    bool IsGamePadPOVFirstFrame(DWORD minValue, DWORD maxValue)
+    {
+        bool isDown = IsGamePadCurrentPOVPressed(minValue, maxValue);
+        bool wasDown = IsGamePadPrevPOVPressed(minValue, maxValue);
+        return isDown && !wasDown;
+    }
+
+    bool IsGamePadPOVHold(DWORD minValue, DWORD maxValue)
+    {
+        if (g_gamePadPOVDeque.size() <= kHoldFrameCount)
+        {
+            return false;
+        }
+
+        for (std::size_t i = 0; i < kHoldFrameCount; ++i)
+        {
+            if (!IsGamePadPOVPressed(g_gamePadPOVDeque.at(i), minValue, maxValue))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     BOOL CALLBACK EnumGamePadCallback(const DIDEVICEINSTANCE* instance, VOID* context)
@@ -511,6 +573,7 @@ bool GamePad_D::Initialize()
     ZeroMemory(&g_gamePadState, sizeof(g_gamePadState));
     ZeroMemory(&g_gamePadPrevState, sizeof(g_gamePadPrevState));
     g_gamePadButtonDeque.clear();
+    g_gamePadPOVDeque.clear();
     g_lastGamePadSearchTime = GetTickCount64();
 
     HRESULT ret = g_directInput->EnumDevices(DI8DEVCLASS_GAMECTRL,
@@ -556,6 +619,9 @@ bool GamePad_D::Finalize()
 
     std::deque<std::vector<BYTE>> emptyDeque;
     g_gamePadButtonDeque.swap(emptyDeque);
+
+    std::deque<DWORD> emptyPOVDeque;
+    g_gamePadPOVDeque.swap(emptyPOVDeque);
 
     if (g_gamePad != nullptr)
     {
@@ -615,6 +681,7 @@ bool GamePad_D::Update()
               &g_gamePadState.rgbButtons[kGamePadButtonCount],
               temp.begin());
     g_gamePadButtonDeque.push_front(temp);
+    g_gamePadPOVDeque.push_front(g_gamePadState.rgdwPOV[0]);
 
     if (g_gamePadButtonDeque.size() >= kInputHistoryFrameCount)
     {
@@ -622,35 +689,41 @@ bool GamePad_D::Update()
                                    g_gamePadButtonDeque.end());
     }
 
+    if (g_gamePadPOVDeque.size() >= kInputHistoryFrameCount)
+    {
+        g_gamePadPOVDeque.erase(g_gamePadPOVDeque.begin() + kInputHistoryFrameCount,
+                                g_gamePadPOVDeque.end());
+    }
+
     return true;
 }
 
-bool GamePad_D::IsDown(const char key)
+bool GamePad_D::IsDown(GamePadButton button)
 {
-    if (!IsValidGamePadButtonIndex(key))
+    if (!IsValidGamePadButtonIndex(button))
     {
         return false;
     }
 
-    return (g_gamePadState.rgbButtons[(std::size_t)key] & 0x80) != 0;
+    return (g_gamePadState.rgbButtons[(std::size_t)button] & 0x80) != 0;
 }
 
-bool GamePad_D::IsDownFirstFrame(const char key)
+bool GamePad_D::IsDownFirstFrame(GamePadButton button)
 {
-    if (!IsValidGamePadButtonIndex(key))
+    if (!IsValidGamePadButtonIndex(button))
     {
         return false;
     }
 
-    const std::size_t index = (std::size_t)key;
+    const std::size_t index = (std::size_t)button;
     const bool isDown = (g_gamePadState.rgbButtons[index] & 0x80) != 0;
     const bool wasDown = (g_gamePadPrevState.rgbButtons[index] & 0x80) != 0;
     return isDown && !wasDown;
 }
 
-bool GamePad_D::IsHold(const char key)
+bool GamePad_D::IsHold(GamePadButton button)
 {
-    if (!IsValidGamePadButtonIndex(key))
+    if (!IsValidGamePadButtonIndex(button))
     {
         return false;
     }
@@ -662,7 +735,7 @@ bool GamePad_D::IsHold(const char key)
 
     for (std::size_t i = 0; i < kHoldFrameCount; ++i)
     {
-        if ((g_gamePadButtonDeque.at(i).at((std::size_t)key) & 0x80) == 0)
+        if ((g_gamePadButtonDeque.at(i).at((std::size_t)button) & 0x80) == 0)
         {
             return false;
         }
@@ -671,14 +744,94 @@ bool GamePad_D::IsHold(const char key)
     return true;
 }
 
-bool GamePad_D::IsUp(const char key)
+bool GamePad_D::IsUp(GamePadButton button)
 {
-    if (!IsValidGamePadButtonIndex(key))
+    if (!IsValidGamePadButtonIndex(button))
     {
         return false;
     }
 
-    return (g_gamePadState.rgbButtons[(std::size_t)key] & 0x80) == 0;
+    return (g_gamePadState.rgbButtons[(std::size_t)button] & 0x80) == 0;
+}
+
+bool GamePad_D::IsPOVUp()
+{
+    return IsGamePadCurrentPOVPressed(31500, 4500);
+}
+
+bool GamePad_D::IsPOVUpFirstFrame()
+{
+    return IsGamePadPOVFirstFrame(31500, 4500);
+}
+
+bool GamePad_D::IsPOVUpHold()
+{
+    return IsGamePadPOVHold(31500, 4500);
+}
+
+bool GamePad_D::IsPOVUpUp()
+{
+    return !IsPOVUp();
+}
+
+bool GamePad_D::IsPOVRight()
+{
+    return IsGamePadCurrentPOVPressed(4500, 13500);
+}
+
+bool GamePad_D::IsPOVRightFirstFrame()
+{
+    return IsGamePadPOVFirstFrame(4500, 13500);
+}
+
+bool GamePad_D::IsPOVRightHold()
+{
+    return IsGamePadPOVHold(4500, 13500);
+}
+
+bool GamePad_D::IsPOVRightUp()
+{
+    return !IsPOVRight();
+}
+
+bool GamePad_D::IsPOVDown()
+{
+    return IsGamePadCurrentPOVPressed(13500, 22500);
+}
+
+bool GamePad_D::IsPOVDownFirstFrame()
+{
+    return IsGamePadPOVFirstFrame(13500, 22500);
+}
+
+bool GamePad_D::IsPOVDownHold()
+{
+    return IsGamePadPOVHold(13500, 22500);
+}
+
+bool GamePad_D::IsPOVDownUp()
+{
+    return !IsPOVDown();
+}
+
+bool GamePad_D::IsPOVLeft()
+{
+    return IsGamePadCurrentPOVPressed(22500, 31500);
+}
+
+bool GamePad_D::IsPOVLeftFirstFrame()
+{
+    return IsGamePadPOVFirstFrame(22500, 31500);
+}
+
+bool GamePad_D::IsPOVLeftHold()
+{
+    return IsGamePadPOVHold(22500, 31500);
+}
+
+bool GamePad_D::IsPOVLeftUp()
+{
+    return !IsPOVLeft();
 }
 
 // モックキーボードクラスを使いたい場合は、
