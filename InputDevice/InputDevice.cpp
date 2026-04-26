@@ -40,6 +40,31 @@ namespace
         return 0 <= buttonIndex && static_cast<std::size_t>(buttonIndex) < kGamePadButtonCount;
     }
 
+    bool IsGamePadPOVButton(GamePadButton button)
+    {
+        if (button == GAMEPAD_POV_UP)
+        {
+            return true;
+        }
+
+        if (button == GAMEPAD_POV_RIGHT)
+        {
+            return true;
+        }
+
+        if (button == GAMEPAD_POV_DOWN)
+        {
+            return true;
+        }
+
+        if (button == GAMEPAD_POV_LEFT)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     bool IsGamePadPOVPressed(DWORD pov, DWORD minValue, DWORD maxValue)
     {
         if (pov == 0xFFFFFFFF)
@@ -98,6 +123,81 @@ namespace
         }
 
         return true;
+    }
+
+    bool IsGamePadCurrentPOVButtonPressed(GamePadButton button)
+    {
+        if (button == GAMEPAD_POV_UP)
+        {
+            return IsGamePadCurrentPOVPressed(31500, 4500);
+        }
+
+        if (button == GAMEPAD_POV_RIGHT)
+        {
+            return IsGamePadCurrentPOVPressed(4500, 13500);
+        }
+
+        if (button == GAMEPAD_POV_DOWN)
+        {
+            return IsGamePadCurrentPOVPressed(13500, 22500);
+        }
+
+        if (button == GAMEPAD_POV_LEFT)
+        {
+            return IsGamePadCurrentPOVPressed(22500, 31500);
+        }
+
+        return false;
+    }
+
+    bool IsGamePadPOVButtonFirstFrame(GamePadButton button)
+    {
+        if (button == GAMEPAD_POV_UP)
+        {
+            return IsGamePadPOVFirstFrame(31500, 4500);
+        }
+
+        if (button == GAMEPAD_POV_RIGHT)
+        {
+            return IsGamePadPOVFirstFrame(4500, 13500);
+        }
+
+        if (button == GAMEPAD_POV_DOWN)
+        {
+            return IsGamePadPOVFirstFrame(13500, 22500);
+        }
+
+        if (button == GAMEPAD_POV_LEFT)
+        {
+            return IsGamePadPOVFirstFrame(22500, 31500);
+        }
+
+        return false;
+    }
+
+    bool IsGamePadPOVButtonHold(GamePadButton button)
+    {
+        if (button == GAMEPAD_POV_UP)
+        {
+            return IsGamePadPOVHold(31500, 4500);
+        }
+
+        if (button == GAMEPAD_POV_RIGHT)
+        {
+            return IsGamePadPOVHold(4500, 13500);
+        }
+
+        if (button == GAMEPAD_POV_DOWN)
+        {
+            return IsGamePadPOVHold(13500, 22500);
+        }
+
+        if (button == GAMEPAD_POV_LEFT)
+        {
+            return IsGamePadPOVHold(22500, 31500);
+        }
+
+        return false;
     }
 
     BOOL CALLBACK EnumGamePadCallback(const DIDEVICEINSTANCE* instance, VOID* context)
@@ -700,6 +800,11 @@ bool GamePad_D::Update()
 
 bool GamePad_D::IsDown(GamePadButton button)
 {
+    if (IsGamePadPOVButton(button))
+    {
+        return IsGamePadCurrentPOVButtonPressed(button);
+    }
+
     if (!IsValidGamePadButtonIndex(button))
     {
         return false;
@@ -710,6 +815,11 @@ bool GamePad_D::IsDown(GamePadButton button)
 
 bool GamePad_D::IsDownFirstFrame(GamePadButton button)
 {
+    if (IsGamePadPOVButton(button))
+    {
+        return IsGamePadPOVButtonFirstFrame(button);
+    }
+
     if (!IsValidGamePadButtonIndex(button))
     {
         return false;
@@ -723,6 +833,11 @@ bool GamePad_D::IsDownFirstFrame(GamePadButton button)
 
 bool GamePad_D::IsHold(GamePadButton button)
 {
+    if (IsGamePadPOVButton(button))
+    {
+        return IsGamePadPOVButtonHold(button);
+    }
+
     if (!IsValidGamePadButtonIndex(button))
     {
         return false;
@@ -746,92 +861,17 @@ bool GamePad_D::IsHold(GamePadButton button)
 
 bool GamePad_D::IsUp(GamePadButton button)
 {
+    if (IsGamePadPOVButton(button))
+    {
+        return !IsGamePadCurrentPOVButtonPressed(button);
+    }
+
     if (!IsValidGamePadButtonIndex(button))
     {
         return false;
     }
 
     return (g_gamePadState.rgbButtons[(std::size_t)button] & 0x80) == 0;
-}
-
-bool GamePad_D::IsPOVUp()
-{
-    return IsGamePadCurrentPOVPressed(31500, 4500);
-}
-
-bool GamePad_D::IsPOVUpFirstFrame()
-{
-    return IsGamePadPOVFirstFrame(31500, 4500);
-}
-
-bool GamePad_D::IsPOVUpHold()
-{
-    return IsGamePadPOVHold(31500, 4500);
-}
-
-bool GamePad_D::IsPOVUpUp()
-{
-    return !IsPOVUp();
-}
-
-bool GamePad_D::IsPOVRight()
-{
-    return IsGamePadCurrentPOVPressed(4500, 13500);
-}
-
-bool GamePad_D::IsPOVRightFirstFrame()
-{
-    return IsGamePadPOVFirstFrame(4500, 13500);
-}
-
-bool GamePad_D::IsPOVRightHold()
-{
-    return IsGamePadPOVHold(4500, 13500);
-}
-
-bool GamePad_D::IsPOVRightUp()
-{
-    return !IsPOVRight();
-}
-
-bool GamePad_D::IsPOVDown()
-{
-    return IsGamePadCurrentPOVPressed(13500, 22500);
-}
-
-bool GamePad_D::IsPOVDownFirstFrame()
-{
-    return IsGamePadPOVFirstFrame(13500, 22500);
-}
-
-bool GamePad_D::IsPOVDownHold()
-{
-    return IsGamePadPOVHold(13500, 22500);
-}
-
-bool GamePad_D::IsPOVDownUp()
-{
-    return !IsPOVDown();
-}
-
-bool GamePad_D::IsPOVLeft()
-{
-    return IsGamePadCurrentPOVPressed(22500, 31500);
-}
-
-bool GamePad_D::IsPOVLeftFirstFrame()
-{
-    return IsGamePadPOVFirstFrame(22500, 31500);
-}
-
-bool GamePad_D::IsPOVLeftHold()
-{
-    return IsGamePadPOVHold(22500, 31500);
-}
-
-bool GamePad_D::IsPOVLeftUp()
-{
-    return !IsPOVLeft();
 }
 
 // モックキーボードクラスを使いたい場合は、

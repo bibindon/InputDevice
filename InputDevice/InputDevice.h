@@ -132,6 +132,10 @@ enum GamePadButton
     GAMEPAD_R2 = 7,
     GAMEPAD_BACK = 8,
     GAMEPAD_START = 9,
+    GAMEPAD_POV_UP = 128,
+    GAMEPAD_POV_RIGHT = 129,
+    GAMEPAD_POV_DOWN = 130,
+    GAMEPAD_POV_LEFT = 131,
 };
 
 class GamePad_D
@@ -145,22 +149,6 @@ public:
     static bool IsDownFirstFrame(GamePadButton button);
     static bool IsHold(GamePadButton button);
     static bool IsUp(GamePadButton button);
-    static bool IsPOVUp();
-    static bool IsPOVUpFirstFrame();
-    static bool IsPOVUpHold();
-    static bool IsPOVUpUp();
-    static bool IsPOVRight();
-    static bool IsPOVRightFirstFrame();
-    static bool IsPOVRightHold();
-    static bool IsPOVRightUp();
-    static bool IsPOVDown();
-    static bool IsPOVDownFirstFrame();
-    static bool IsPOVDownHold();
-    static bool IsPOVDownUp();
-    static bool IsPOVLeft();
-    static bool IsPOVLeftFirstFrame();
-    static bool IsPOVLeftHold();
-    static bool IsPOVLeftUp();
 
 private:
 };
