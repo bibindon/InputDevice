@@ -8,7 +8,6 @@
 #include <d3d9.h>
 #include <d3dx9.h>
 #include <string>
-#include <sstream>
 #include <tchar.h>
 #include <cassert>
 #include <crtdbg.h>
@@ -106,9 +105,14 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
     {
         if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
+            if (msg.message == WM_QUIT)
+            {
+                break;
+            }
+
             DispatchMessage(&msg);
         }
-
+        else
         {
             Sleep(16);
 
@@ -154,7 +158,7 @@ void DrawInputStatus()
     TCHAR middleMouseStatus[32];
     D3DCOLOR keyboardColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     D3DCOLOR mouseColor = D3DCOLOR_ARGB(255, 0, 0, 0);
-    std::wstringstream keyboardStream;
+    std::wstring keyboardText;
     bool hasKeyboardInput = false;
 
     _stprintf_s(msg, 256, _T("FPS: %.2f"), GetFps());
@@ -172,33 +176,33 @@ void DrawInputStatus()
 
         if (hasKeyboardInput)
         {
-            keyboardStream << L", ";
+            keyboardText += L", ";
         }
 
-        keyboardStream << KeyCodeToString(keyCode);
-        keyboardStream << L"(";
-        keyboardStream << L"Down";
+        keyboardText += KeyCodeToString(keyCode);
+        keyboardText += L"(";
+        keyboardText += L"Down";
 
         if (SKeyBoard::IsHold(keyCode))
         {
-            keyboardStream << L"+Hold";
+            keyboardText += L"+Hold";
         }
         else if (SKeyBoard::IsDownFirstFrame(keyCode))
         {
-            keyboardStream << L"+First";
+            keyboardText += L"+First";
             keyboardColor = D3DCOLOR_ARGB(255, 0, 160, 0);
         }
-        keyboardStream << L")";
+        keyboardText += L")";
 
         hasKeyboardInput = true;
     }
 
     if (!hasKeyboardInput)
     {
-        keyboardStream << L"None";
+        keyboardText = L"None";
     }
 
-    _snwprintf_s(msg, 256, _TRUNCATE, L"%s", keyboardStream.str().c_str());
+    _snwprintf_s(msg, 256, _TRUNCATE, L"%s", keyboardText.c_str());
     TextDraw(g_pFont, msg, 20, 90, keyboardColor);
 
     _tcscpy_s(msg, 256, _T("Mouse: Left / Right / Middle"));
@@ -479,20 +483,48 @@ void InitD3D(HWND hWnd)
 
 void Cleanup()
 {
+    if (g_pd3dDevice != NULL)
+    {
+        for (DWORD i = 0; i < 8; ++i)
+        {
+            g_pd3dDevice->SetTexture(i, NULL);
+        }
+
+        g_pd3dDevice->SetStreamSource(0, NULL, 0, 0);
+        g_pd3dDevice->SetIndices(NULL);
+        g_pd3dDevice->SetVertexShader(NULL);
+        g_pd3dDevice->SetPixelShader(NULL);
+        g_pd3dDevice->SetVertexDeclaration(NULL);
+    }
+
+    if (g_pEffect != NULL)
+    {
+        g_pEffect->SetTexture("texture1", NULL);
+        g_pEffect->OnLostDevice();
+    }
+
+    if (g_pFont != NULL)
+    {
+        g_pFont->OnLostDevice();
+    }
+
+    SAFE_RELEASE(g_pEffect);
+    SAFE_RELEASE(g_pFont);
+    SAFE_RELEASE(g_pMesh);
+
     for (auto& texture : g_pTextures)
     {
         SAFE_RELEASE(texture);
     }
 
-    g_pTextures.clear();
-    g_pTextures.shrink_to_fit();
-    g_pMaterials.clear();
-    g_pMaterials.shrink_to_fit();
+    std::vector<LPDIRECT3DTEXTURE9> emptyTextures;
+    g_pTextures.swap(emptyTextures);
+
+    std::vector<D3DMATERIAL9> emptyMaterials;
+    g_pMaterials.swap(emptyMaterials);
+
     g_dwNumMaterials = 0;
 
-    SAFE_RELEASE(g_pMesh);
-    SAFE_RELEASE(g_pEffect);
-    SAFE_RELEASE(g_pFont);
     SAFE_RELEASE(g_pd3dDevice);
     SAFE_RELEASE(g_pD3D);
 }

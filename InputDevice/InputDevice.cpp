@@ -139,6 +139,9 @@ void KeyBoard::Update()
 
 void KeyBoard::Finalize()
 {
+    std::deque<std::vector<BYTE>> emptyDeque;
+    m_keyDeque.swap(emptyDeque);
+
     if (m_keyboard != nullptr)
     {
         m_keyboard->Unacquire();
@@ -226,7 +229,9 @@ void MockKeyBoard::Finalize()
 {
     ClearAllKeys();
     ZeroMemory(m_keyPrev, sizeof(m_keyPrev));
-    m_keyDeque.clear();
+
+    std::deque<std::vector<BYTE>> emptyDeque;
+    m_keyDeque.swap(emptyDeque);
 }
 
 bool MockKeyBoard::IsDown(int keyCode)
@@ -347,9 +352,11 @@ bool Mouse::Initialize()
 
 bool Mouse::Finalize()
 {
-    g_mouseButtonDeque.clear();
     ZeroMemory(&g_mouseState, sizeof(g_mouseState));
     ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
+
+    std::deque<std::vector<BYTE>> emptyDeque;
+    g_mouseButtonDeque.swap(emptyDeque);
 
     if (g_mouse != nullptr)
     {
