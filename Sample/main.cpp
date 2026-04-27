@@ -183,11 +183,16 @@ void DrawInputStatus()
     TCHAR gamePadR2Status[32];
     TCHAR gamePadL1Status[32];
     TCHAR gamePadL2Status[32];
+    TCHAR unifiedUpStatus[32];
+    TCHAR unifiedRightStatus[32];
+    TCHAR unifiedDownStatus[32];
+    TCHAR unifiedLeftStatus[32];
     GamePadStick stickL = GamePad::GetStickL();
     GamePadStick stickR = GamePad::GetStickR();
     D3DCOLOR keyboardColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     D3DCOLOR mouseColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     D3DCOLOR gamePadColor = D3DCOLOR_ARGB(255, 0, 0, 0);
+    D3DCOLOR unifiedInputColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     std::wstring keyboardText;
     bool hasKeyboardInput = false;
 
@@ -342,6 +347,7 @@ void DrawInputStatus()
     _tcscpy_s(msg, 256, _T("GamePad: D-Pad"));
     TextDraw(g_pFont, msg, 20, 220);
 
+    gamePadColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     SetGamePadButtonStatus(GAMEPAD_POV_UP, gamePadUpStatus, 32, &gamePadColor);
     SetGamePadButtonStatus(GAMEPAD_POV_RIGHT, gamePadRightStatus, 32, &gamePadColor);
     SetGamePadButtonStatus(GAMEPAD_POV_DOWN, gamePadDownStatus, 32, &gamePadColor);
@@ -359,6 +365,7 @@ void DrawInputStatus()
     _tcscpy_s(msg, 256, _T("GamePad: X / Y / A / B"));
     TextDraw(g_pFont, msg, 20, 300);
 
+    gamePadColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     SetGamePadButtonStatus(GAMEPAD_A, gamePadAStatus, 32, &gamePadColor);
     SetGamePadButtonStatus(GAMEPAD_B, gamePadBStatus, 32, &gamePadColor);
     SetGamePadButtonStatus(GAMEPAD_X, gamePadXStatus, 32, &gamePadColor);
@@ -376,6 +383,7 @@ void DrawInputStatus()
     _tcscpy_s(msg, 256, _T("GamePad: START / BACK / R1 / R2 / L1 / L2"));
     TextDraw(g_pFont, msg, 20, 380);
 
+    gamePadColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     SetGamePadButtonStatus(GAMEPAD_START, gamePadStartStatus, 32, &gamePadColor);
     SetGamePadButtonStatus(GAMEPAD_BACK, gamePadBackStatus, 32, &gamePadColor);
     SetGamePadButtonStatus(GAMEPAD_R1, gamePadR1Status, 32, &gamePadColor);
@@ -402,6 +410,7 @@ void DrawInputStatus()
     _tcscpy_s(msg, 256, _T("GamePad: Stick"));
     TextDraw(g_pFont, msg, 20, 490);
 
+    gamePadColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     _stprintf_s(msg,
                 256,
                 _T("L Stick: x:% .2f  y:% .2f  power:%.2f  angle:% .2f"),
@@ -419,6 +428,103 @@ void DrawInputStatus()
                 stickR.power,
                 stickR.angle);
     TextDraw(g_pFont, msg, 20, 550, gamePadColor);
+
+    _tcscpy_s(msg, 256, _T("UnifiedInput: D-Pad (Keyboard Arrow / GamePad D-Pad)"));
+    TextDraw(g_pFont, msg, 20, 700);
+
+    unifiedInputColor = D3DCOLOR_ARGB(255, 0, 0, 0);
+    if (UnifiedInput::IsDown(GAMEPAD_POV_UP))
+    {
+        if (UnifiedInput::IsHold(GAMEPAD_POV_UP))
+        {
+            _tcscpy_s(unifiedUpStatus, 32, _T("Down+Hold"));
+        }
+        else if (UnifiedInput::IsDownFirstFrame(GAMEPAD_POV_UP))
+        {
+            _tcscpy_s(unifiedUpStatus, 32, _T("Down+First"));
+            unifiedInputColor = D3DCOLOR_ARGB(255, 0, 160, 0);
+        }
+        else
+        {
+            _tcscpy_s(unifiedUpStatus, 32, _T("Down"));
+        }
+    }
+    else
+    {
+        _tcscpy_s(unifiedUpStatus, 32, _T("Up"));
+    }
+
+    if (UnifiedInput::IsDown(GAMEPAD_POV_RIGHT))
+    {
+        if (UnifiedInput::IsHold(GAMEPAD_POV_RIGHT))
+        {
+            _tcscpy_s(unifiedRightStatus, 32, _T("Down+Hold"));
+        }
+        else if (UnifiedInput::IsDownFirstFrame(GAMEPAD_POV_RIGHT))
+        {
+            _tcscpy_s(unifiedRightStatus, 32, _T("Down+First"));
+            unifiedInputColor = D3DCOLOR_ARGB(255, 0, 160, 0);
+        }
+        else
+        {
+            _tcscpy_s(unifiedRightStatus, 32, _T("Down"));
+        }
+    }
+    else
+    {
+        _tcscpy_s(unifiedRightStatus, 32, _T("Up"));
+    }
+
+    if (UnifiedInput::IsDown(GAMEPAD_POV_DOWN))
+    {
+        if (UnifiedInput::IsHold(GAMEPAD_POV_DOWN))
+        {
+            _tcscpy_s(unifiedDownStatus, 32, _T("Down+Hold"));
+        }
+        else if (UnifiedInput::IsDownFirstFrame(GAMEPAD_POV_DOWN))
+        {
+            _tcscpy_s(unifiedDownStatus, 32, _T("Down+First"));
+            unifiedInputColor = D3DCOLOR_ARGB(255, 0, 160, 0);
+        }
+        else
+        {
+            _tcscpy_s(unifiedDownStatus, 32, _T("Down"));
+        }
+    }
+    else
+    {
+        _tcscpy_s(unifiedDownStatus, 32, _T("Up"));
+    }
+
+    if (UnifiedInput::IsDown(GAMEPAD_POV_LEFT))
+    {
+        if (UnifiedInput::IsHold(GAMEPAD_POV_LEFT))
+        {
+            _tcscpy_s(unifiedLeftStatus, 32, _T("Down+Hold"));
+        }
+        else if (UnifiedInput::IsDownFirstFrame(GAMEPAD_POV_LEFT))
+        {
+            _tcscpy_s(unifiedLeftStatus, 32, _T("Down+First"));
+            unifiedInputColor = D3DCOLOR_ARGB(255, 0, 160, 0);
+        }
+        else
+        {
+            _tcscpy_s(unifiedLeftStatus, 32, _T("Down"));
+        }
+    }
+    else
+    {
+        _tcscpy_s(unifiedLeftStatus, 32, _T("Up"));
+    }
+
+    _stprintf_s(msg,
+                256,
+                _T("Up:%s  Right:%s  Down:%s  Left:%s"),
+                unifiedUpStatus,
+                unifiedRightStatus,
+                unifiedDownStatus,
+                unifiedLeftStatus);
+    TextDraw(g_pFont, msg, 20, 730, unifiedInputColor);
 
 }
 

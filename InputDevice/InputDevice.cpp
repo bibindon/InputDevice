@@ -205,6 +205,31 @@ void UpdateMousePosition()
         return false;
     }
 
+    int GetUnifiedInputKeyCode(GamePadButton button)
+    {
+        if (button == GAMEPAD_POV_UP)
+        {
+            return DIK_UP;
+        }
+
+        if (button == GAMEPAD_POV_RIGHT)
+        {
+            return DIK_RIGHT;
+        }
+
+        if (button == GAMEPAD_POV_DOWN)
+        {
+            return DIK_DOWN;
+        }
+
+        if (button == GAMEPAD_POV_LEFT)
+        {
+            return DIK_LEFT;
+        }
+
+        return -1;
+    }
+
     float ClampFloat(float value, float minValue, float maxValue)
     {
         if (value < minValue)
@@ -1669,37 +1694,81 @@ void Finalize()
 
 bool UnifiedInput::Initialize()
 {
-    return false;
+    return true;
 }
 
 bool UnifiedInput::Finalize()
 {
-    return false;
+    return true;
 }
 
 bool UnifiedInput::Update()
 {
-    return false;
+    return true;
 }
 
 bool UnifiedInput::IsDown(GamePadButton button)
 {
-    return false;
+    if (GamePad::IsDown(button))
+    {
+        return true;
+    }
+
+    int keyCode = GetUnifiedInputKeyCode(button);
+    if (keyCode < 0)
+    {
+        return false;
+    }
+
+    return SKeyBoard::IsDown(keyCode);
 }
 
 bool UnifiedInput::IsDownFirstFrame(GamePadButton button)
 {
-    return false;
+    if (GamePad::IsDownFirstFrame(button))
+    {
+        return true;
+    }
+
+    int keyCode = GetUnifiedInputKeyCode(button);
+    if (keyCode < 0)
+    {
+        return false;
+    }
+
+    return SKeyBoard::IsDownFirstFrame(keyCode);
 }
 
 bool UnifiedInput::IsHold(GamePadButton button)
 {
-    return false;
+    if (GamePad::IsHold(button))
+    {
+        return true;
+    }
+
+    int keyCode = GetUnifiedInputKeyCode(button);
+    if (keyCode < 0)
+    {
+        return false;
+    }
+
+    return SKeyBoard::IsHold(keyCode);
 }
 
 bool UnifiedInput::IsUp(GamePadButton button)
 {
-    return false;
+    if (GamePad::IsDown(button))
+    {
+        return false;
+    }
+
+    int keyCode = GetUnifiedInputKeyCode(button);
+    if (keyCode < 0)
+    {
+        return true;
+    }
+
+    return !SKeyBoard::IsDown(keyCode);
 }
 
 }
