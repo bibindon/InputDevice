@@ -52,6 +52,38 @@ namespace
         return 0 <= key && key < static_cast<char>(kMouseButtonCount);
     }
 
+    bool GetMouseWindowCenterScreenPosition(POINT* centerPosition)
+    {
+        if (centerPosition == nullptr)
+        {
+            return false;
+        }
+
+        if (g_inputHWnd == nullptr)
+        {
+            return false;
+        }
+
+        RECT clientRect = { };
+        if (!GetClientRect(g_inputHWnd, &clientRect))
+        {
+            return false;
+        }
+
+        POINT clientCenter = { };
+        clientCenter.x = (clientRect.right - clientRect.left) / 2;
+        clientCenter.y = (clientRect.bottom - clientRect.top) / 2;
+
+        if (!ClientToScreen(g_inputHWnd, &clientCenter))
+        {
+            return false;
+        }
+
+        centerPosition->x = clientCenter.x;
+        centerPosition->y = clientCenter.y;
+        return true;
+    }
+
     void ApplyMouseCursorVisible(bool isVisible)
     {
         if (isVisible)
@@ -70,8 +102,19 @@ namespace
         g_mouseCursorVisible = isVisible;
     }
 
-    void UpdateMousePosition()
+    void CenterMouseCursorInWindow()
     {
+        POINT centerPosition = { };
+        if (!GetMouseWindowCenterScreenPosition(&centerPosition))
+        {
+            return;
+        }
+
+        SetCursorPos(centerPosition.x, centerPosition.y);
+    }
+
+void UpdateMousePosition()
+{
         if (g_inputHWnd == nullptr)
         {
             g_mousePosition.x = 0;
@@ -914,6 +957,12 @@ bool Mouse::Update()
     g_mouseDelta.x = g_mouseState.lX;
     g_mouseDelta.y = g_mouseState.lY;
 
+    if (!g_mouseCursorVisible)
+    {
+        CenterMouseCursorInWindow();
+        UpdateMousePosition();
+    }
+
     std::vector<BYTE> temp(kMouseButtonCount);
     std::copy(&g_mouseState.rgbButtons[0],
               &g_mouseState.rgbButtons[kMouseButtonCount],
@@ -998,6 +1047,13 @@ bool Mouse::IsVisible()
 void Mouse::SetVisible(bool isVisible)
 {
     ApplyMouseCursorVisible(isVisible);
+
+    if (!isVisible)
+    {
+        CenterMouseCursorInWindow();
+        UpdateMousePosition();
+        g_mousePrevPosition = g_mousePosition;
+    }
 }
 
 MousePosition Mouse::GetPosition()

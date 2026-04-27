@@ -65,7 +65,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
     wc.cbWndExtra = 0;
     wc.hInstance = GetModuleHandle(NULL);
     wc.hIcon = NULL;
-    wc.hCursor = NULL;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = NULL;
     wc.lpszMenuName = NULL;
     wc.lpszClassName = _T("Window1");
