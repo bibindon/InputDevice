@@ -48,6 +48,7 @@ const float kGamePadStickDeadZone = 0.05f;
 const BYTE kGamePadXTriggerThreshold = 30;
 const ULONGLONG kGamePadSearchIntervalMilliseconds = 5000;
 std::multimap<int, int> g_unifiedInputKeyMap;
+std::multimap<int, int> g_unifiedInputMouseButtonMap;
 
 namespace
 {
@@ -224,6 +225,7 @@ bool IsGamePadPOVButton(GamePadButton button)
 void ResetUnifiedInputKeyMap()
 {
     g_unifiedInputKeyMap.clear();
+    g_unifiedInputMouseButtonMap.clear();
     g_unifiedInputKeyMap.emplace(GAMEPAD_A, DIK_ESCAPE);
     g_unifiedInputKeyMap.emplace(GAMEPAD_B, DIK_RETURN);
     g_unifiedInputKeyMap.emplace(GAMEPAD_B, DIK_SPACE);
@@ -231,21 +233,9 @@ void ResetUnifiedInputKeyMap()
     g_unifiedInputKeyMap.emplace(GAMEPAD_POV_RIGHT, DIK_RIGHT);
     g_unifiedInputKeyMap.emplace(GAMEPAD_POV_DOWN, DIK_DOWN);
     g_unifiedInputKeyMap.emplace(GAMEPAD_POV_LEFT, DIK_LEFT);
-}
-
-int GetUnifiedInputMouseButton(GamePadButton button)
-{
-    if (button == GAMEPAD_R1)
-    {
-        return static_cast<int>(MOUSE_LEFT);
-    }
-
-    if (button == GAMEPAD_R2)
-    {
-        return static_cast<int>(MOUSE_RIGHT);
-    }
-
-    return -1;
+    g_unifiedInputMouseButtonMap.emplace(GAMEPAD_A, MOUSE_SIDE1);
+    g_unifiedInputMouseButtonMap.emplace(GAMEPAD_R1, MOUSE_LEFT);
+    g_unifiedInputMouseButtonMap.emplace(GAMEPAD_R2, MOUSE_RIGHT);
 }
 
 float ClampFloat(float value, float minValue, float maxValue)

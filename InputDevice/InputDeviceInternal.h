@@ -43,6 +43,7 @@ extern const float kGamePadStickDeadZone;
 extern const BYTE kGamePadXTriggerThreshold;
 extern const ULONGLONG kGamePadSearchIntervalMilliseconds;
 extern std::multimap<int, int> g_unifiedInputKeyMap;
+extern std::multimap<int, int> g_unifiedInputMouseButtonMap;
 
 bool IsValidMouseButtonIndex(MouseButton key);
 bool GetMouseWindowCenterScreenPosition(POINT* centerPosition);
@@ -54,7 +55,6 @@ bool IsMouseCursorInWindow();
 bool IsValidGamePadButtonIndex(GamePadButton button);
 bool IsValidGamePadXButtonStateIndex(GamePadButton button);
 bool IsGamePadPOVButton(GamePadButton button);
-int GetUnifiedInputMouseButton(GamePadButton button);
 void ResetUnifiedInputKeyMap();
 
 float ClampFloat(float value, float minValue, float maxValue);

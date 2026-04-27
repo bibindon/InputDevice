@@ -25,6 +25,45 @@ namespace
 
         return false;
     }
+
+    bool IsUnifiedInputMouseButtonTriggered(GamePadButton button, bool(*predicate)(MouseButton))
+    {
+        if (predicate == nullptr)
+        {
+            return false;
+        }
+
+        auto range = g_unifiedInputMouseButtonMap.equal_range(static_cast<int>(button));
+        for (auto it = range.first; it != range.second; ++it)
+        {
+            if (predicate(static_cast<MouseButton>(it->second)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool IsUnifiedInputWheelUpTriggered(GamePadButton button)
+    {
+        if (button != GAMEPAD_POV_UP)
+        {
+            return false;
+        }
+
+        return Mouse::GetWheelDelta() > 0;
+    }
+
+    bool IsUnifiedInputWheelDownTriggered(GamePadButton button)
+    {
+        if (button != GAMEPAD_POV_DOWN)
+        {
+            return false;
+        }
+
+        return Mouse::GetWheelDelta() < 0;
+    }
 }
 
 bool UnifiedInput::Initialize()
@@ -56,10 +95,19 @@ bool UnifiedInput::IsDown(GamePadButton button)
         return true;
     }
 
-    int mouseButton = GetUnifiedInputMouseButton(button);
-    if (0 <= mouseButton)
+    if (IsUnifiedInputMouseButtonTriggered(button, Mouse::IsDown))
     {
-        return Mouse::IsDown(static_cast<MouseButton>(mouseButton));
+        return true;
+    }
+
+    if (IsUnifiedInputWheelUpTriggered(button))
+    {
+        return true;
+    }
+
+    if (IsUnifiedInputWheelDownTriggered(button))
+    {
+        return true;
     }
 
     return false;
@@ -77,10 +125,19 @@ bool UnifiedInput::IsDownFirstFrame(GamePadButton button)
         return true;
     }
 
-    int mouseButton = GetUnifiedInputMouseButton(button);
-    if (0 <= mouseButton)
+    if (IsUnifiedInputMouseButtonTriggered(button, Mouse::IsDownFirstFrame))
     {
-        return Mouse::IsDownFirstFrame(static_cast<MouseButton>(mouseButton));
+        return true;
+    }
+
+    if (IsUnifiedInputWheelUpTriggered(button))
+    {
+        return true;
+    }
+
+    if (IsUnifiedInputWheelDownTriggered(button))
+    {
+        return true;
     }
 
     return false;
@@ -98,10 +155,9 @@ bool UnifiedInput::IsHold(GamePadButton button)
         return true;
     }
 
-    int mouseButton = GetUnifiedInputMouseButton(button);
-    if (0 <= mouseButton)
+    if (IsUnifiedInputMouseButtonTriggered(button, Mouse::IsHold))
     {
-        return Mouse::IsHold(static_cast<MouseButton>(mouseButton));
+        return true;
     }
 
     return false;
@@ -119,10 +175,9 @@ bool UnifiedInput::IsUpFirstFrame(GamePadButton button)
         return true;
     }
 
-    int mouseButton = GetUnifiedInputMouseButton(button);
-    if (0 <= mouseButton)
+    if (IsUnifiedInputMouseButtonTriggered(button, Mouse::IsUpFirstFrame))
     {
-        return Mouse::IsUpFirstFrame(static_cast<MouseButton>(mouseButton));
+        return true;
     }
 
     return false;
