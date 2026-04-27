@@ -115,7 +115,14 @@ GamePadStick UnifiedInput::GetStickL()
 
 GamePadStick UnifiedInput::GetStickR()
 {
-    return GamePad::GetStickR();
+    GamePadStick gamePadStick = GamePad::GetStickR();
+    GamePadStick mouseStick = { };
+    Mouse::GetDelta(&mouseStick);
+
+    float x = gamePadStick.x + mouseStick.x;
+    float y = gamePadStick.y + mouseStick.y;
+
+    return CreateStickFromFloatAxis(x, y);
 }
 
 }

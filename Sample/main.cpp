@@ -10,6 +10,7 @@
 #include <string>
 #include <tchar.h>
 #include <cassert>
+#include <cmath>
 #include <crtdbg.h>
 #include <cstdarg>
 #include <vector>
@@ -34,6 +35,9 @@ std::vector<LPDIRECT3DTEXTURE9> g_pTextures;
 DWORD g_dwNumMaterials = 0;
 LPD3DXEFFECT g_pEffect = NULL;
 bool g_bClose = false;
+D3DXVECTOR3 g_cameraPosition(0.0f, 3.0f, -12.0f);
+float g_cameraYaw = 0.0f;
+float g_cameraPitch = 0.0f;
 
 static void TextDraw(LPD3DXFONT pFont, const std::wstring& text, int X, int Y, D3DCOLOR color = D3DCOLOR_ARGB(255, 0, 0, 0));
 static void DrawInputStatus();
@@ -182,6 +186,7 @@ void DrawInputStatus()
     GamePadStick stickL = GamePad::GetStickL();
     GamePadStick stickR = GamePad::GetStickR();
     GamePadStick unifiedStickL = UnifiedInput::GetStickL();
+    GamePadStick unifiedStickR = UnifiedInput::GetStickR();
     D3DCOLOR keyboardColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     D3DCOLOR mouseColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     D3DCOLOR gamePadColor = D3DCOLOR_ARGB(255, 0, 0, 0);
@@ -403,6 +408,16 @@ void DrawInputStatus()
                         unifiedStickL.angle),
              20,
              760,
+             unifiedInputColor);
+
+    TextDraw(g_pFont,
+             FormatText(L"UnifiedInput StickR: x:% .2f  y:% .2f  power:%.2f  angle:% .2f",
+                        unifiedStickR.x,
+                        unifiedStickR.y,
+                        unifiedStickR.power,
+                        unifiedStickR.angle),
+             20,
+             790,
              unifiedInputColor);
 
 }
@@ -762,11 +777,29 @@ void Render()
 {
     HRESULT hResult = E_FAIL;
 
-    static float f = 0.0f;
-    f += 0.025f;
-
     D3DXMATRIX mat;
     D3DXMATRIX View, Proj;
+    GamePadStick moveStick = UnifiedInput::GetStickL();
+    GamePadStick lookStick = UnifiedInput::GetStickR();
+
+    g_cameraYaw += lookStick.x * 0.05f;
+    g_cameraPitch += lookStick.y * 0.03f;
+
+    if (g_cameraPitch > 1.2f)
+    {
+        g_cameraPitch = 1.2f;
+    }
+    else if (g_cameraPitch < -1.2f)
+    {
+        g_cameraPitch = -1.2f;
+    }
+
+    D3DXVECTOR3 forward(std::sinf(g_cameraYaw), 0.0f, std::cosf(g_cameraYaw));
+    D3DXVECTOR3 right(std::cosf(g_cameraYaw), 0.0f, -std::sinf(g_cameraYaw));
+    float moveSpeed = 0.2f;
+
+    g_cameraPosition += forward * (moveStick.y * moveSpeed);
+    g_cameraPosition += right * (moveStick.x * moveSpeed);
 
     D3DXMatrixPerspectiveFovLH(&Proj,
                                D3DXToRadian(45),
@@ -774,10 +807,12 @@ void Render()
                                1.0f,
                                10000.0f);
 
-    D3DXVECTOR3 vec1(10 * sinf(f), 10, -10 * cosf(f));
-    D3DXVECTOR3 vec2(0, 0, 0);
-    D3DXVECTOR3 vec3(0, 1, 0);
-    D3DXMatrixLookAtLH(&View, &vec1, &vec2, &vec3);
+    D3DXVECTOR3 lookDirection(std::sinf(g_cameraYaw) * std::cosf(g_cameraPitch),
+                              std::sinf(g_cameraPitch),
+                              std::cosf(g_cameraYaw) * std::cosf(g_cameraPitch));
+    D3DXVECTOR3 lookTarget = g_cameraPosition + lookDirection;
+    D3DXVECTOR3 up(0, 1, 0);
+    D3DXMatrixLookAtLH(&View, &g_cameraPosition, &lookTarget, &up);
     D3DXMatrixIdentity(&mat);
     mat = mat * View * Proj;
 
@@ -808,16 +843,35 @@ void Render()
     hResult = g_pEffect->BeginPass(0);
     assert(hResult == S_OK);
 
-    for (DWORD i = 0; i < g_dwNumMaterials; i++)
+    for (int z = 0; z < 3; ++z)
     {
-        hResult = g_pEffect->SetTexture("texture1", g_pTextures[i]);
-        assert(hResult == S_OK);
+        for (int y = 0; y < 3; ++y)
+        {
+            for (int x = 0; x < 3; ++x)
+            {
+                D3DXMATRIX world;
+                D3DXMatrixTranslation(&world,
+                                      (x - 1) * 30.0f,
+                                      (y - 1) * 30.0f,
+                                      z * 30.0f);
 
-        hResult = g_pEffect->CommitChanges();
-        assert(hResult == S_OK);
+                D3DXMATRIX worldViewProj = world * View * Proj;
+                hResult = g_pEffect->SetMatrix("g_matWorldViewProj", &worldViewProj);
+                assert(hResult == S_OK);
 
-        hResult = g_pMesh->DrawSubset(i);
-        assert(hResult == S_OK);
+                for (DWORD i = 0; i < g_dwNumMaterials; i++)
+                {
+                    hResult = g_pEffect->SetTexture("texture1", g_pTextures[i]);
+                    assert(hResult == S_OK);
+
+                    hResult = g_pEffect->CommitChanges();
+                    assert(hResult == S_OK);
+
+                    hResult = g_pMesh->DrawSubset(i);
+                    assert(hResult == S_OK);
+                }
+            }
+        }
     }
 
     hResult = g_pEffect->EndPass();
