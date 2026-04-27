@@ -35,7 +35,8 @@ std::vector<LPDIRECT3DTEXTURE9> g_pTextures;
 DWORD g_dwNumMaterials = 0;
 LPD3DXEFFECT g_pEffect = NULL;
 bool g_bClose = false;
-D3DXVECTOR3 g_cameraPosition(0.0f, 3.0f, -12.0f);
+D3DXVECTOR3 g_cameraTarget(0.0f, 0.0f, 0.0f);
+float g_cameraDistance = 12.37f;
 float g_cameraYaw = 0.0f;
 float g_cameraPitch = 0.0f;
 
@@ -798,8 +799,8 @@ void Render()
     D3DXVECTOR3 right(std::cosf(g_cameraYaw), 0.0f, -std::sinf(g_cameraYaw));
     float moveSpeed = 0.2f;
 
-    g_cameraPosition += forward * (moveStick.y * moveSpeed);
-    g_cameraPosition += right * (moveStick.x * moveSpeed);
+    g_cameraTarget += forward * (moveStick.y * moveSpeed);
+    g_cameraTarget += right * (moveStick.x * moveSpeed);
 
     D3DXMatrixPerspectiveFovLH(&Proj,
                                D3DXToRadian(45),
@@ -807,12 +808,12 @@ void Render()
                                1.0f,
                                10000.0f);
 
-    D3DXVECTOR3 lookDirection(std::sinf(g_cameraYaw) * std::cosf(g_cameraPitch),
-                              std::sinf(g_cameraPitch),
-                              std::cosf(g_cameraYaw) * std::cosf(g_cameraPitch));
-    D3DXVECTOR3 lookTarget = g_cameraPosition + lookDirection;
+    D3DXVECTOR3 orbitOffset(std::sinf(g_cameraYaw) * std::cosf(g_cameraPitch),
+                            std::sinf(g_cameraPitch),
+                            std::cosf(g_cameraYaw) * std::cosf(g_cameraPitch));
+    D3DXVECTOR3 cameraPosition = g_cameraTarget - (orbitOffset * g_cameraDistance);
     D3DXVECTOR3 up(0, 1, 0);
-    D3DXMatrixLookAtLH(&View, &g_cameraPosition, &lookTarget, &up);
+    D3DXMatrixLookAtLH(&View, &cameraPosition, &g_cameraTarget, &up);
     D3DXMatrixIdentity(&mat);
     mat = mat * View * Proj;
 
