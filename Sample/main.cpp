@@ -195,7 +195,10 @@ void DrawInputStatus()
 
     for (int keyCode = 0; keyCode < 256; ++keyCode)
     {
-        if (!SKeyBoard::IsDown(keyCode))
+        const bool isDown = SKeyBoard::IsDown(keyCode);
+        const bool isUpFirstFrame = SKeyBoard::IsUpFirstFrame(keyCode);
+
+        if (!isDown && !isUpFirstFrame)
         {
             continue;
         }
@@ -207,17 +210,27 @@ void DrawInputStatus()
 
         keyboardText += KeyCodeToString(keyCode);
         keyboardText += L"(";
-        keyboardText += L"Down";
 
-        if (SKeyBoard::IsHold(keyCode))
+        if (isDown)
         {
-            keyboardText += L"+Hold";
+            keyboardText += L"Down";
+
+            if (SKeyBoard::IsHold(keyCode))
+            {
+                keyboardText += L"+Hold";
+            }
+            else if (SKeyBoard::IsDownFirstFrame(keyCode))
+            {
+                keyboardText += L"+First";
+                keyboardColor = D3DCOLOR_ARGB(255, 0, 160, 0);
+            }
         }
-        else if (SKeyBoard::IsDownFirstFrame(keyCode))
+        else if (isUpFirstFrame)
         {
-            keyboardText += L"+First";
-            keyboardColor = D3DCOLOR_ARGB(255, 0, 160, 0);
+            keyboardText += L"UpFirst";
+            keyboardColor = D3DCOLOR_ARGB(255, 200, 0, 0);
         }
+
         keyboardText += L")";
 
         hasKeyboardInput = true;
@@ -415,6 +428,16 @@ std::wstring GetMouseButtonStatus(char button, D3DCOLOR* color)
         return L"Down";
     }
 
+    if (Mouse::IsUpFirstFrame(button))
+    {
+        if (color != nullptr)
+        {
+            *color = D3DCOLOR_ARGB(255, 200, 0, 0);
+        }
+
+        return L"Up+First";
+    }
+
     return L"Up";
 }
 
@@ -439,6 +462,16 @@ std::wstring SetGamePadButtonStatus(GamePadButton button, D3DCOLOR* color)
         return L"Down";
     }
 
+    if (GamePad::IsUpFirstFrame(button))
+    {
+        if (color != nullptr)
+        {
+            *color = D3DCOLOR_ARGB(255, 200, 0, 0);
+        }
+
+        return L"Up+First";
+    }
+
     return L"Up";
 }
 
@@ -461,6 +494,16 @@ std::wstring GetUnifiedInputStatus(GamePadButton button, D3DCOLOR* color)
         }
 
         return L"Down";
+    }
+
+    if (UnifiedInput::IsUpFirstFrame(button))
+    {
+        if (color != nullptr)
+        {
+            *color = D3DCOLOR_ARGB(255, 200, 0, 0);
+        }
+
+        return L"Up+First";
     }
 
     return L"Up";

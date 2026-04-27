@@ -36,6 +36,9 @@ public:
     // 0.5秒以上長押ししていた
     virtual bool IsHold(int keyCode) = 0;
 
+    // 押されていたが、その直後の1フレームだけ離された
+    virtual bool IsUpFirstFrame(int keyCode) = 0;
+
 };
 
 class KeyBoard : public IKeyBoard
@@ -54,10 +57,12 @@ public:
     // 0.5秒以上長押ししていた
     bool IsHold(int keyCode);
 
+    bool IsUpFirstFrame(int keyCode);
+
 private:
-    LPDIRECTINPUTDEVICE8 m_keyboard;
-    BYTE m_key[256];
-    BYTE m_keyPrev[256];
+    LPDIRECTINPUTDEVICE8 m_keyboard = nullptr;
+    BYTE m_key[256] = { };
+    BYTE m_keyPrev[256] = { };
     std::deque<std::vector<BYTE>> m_keyDeque;
 };
 
@@ -71,13 +76,14 @@ public:
     bool IsDown(int keyCode);
     bool IsDownFirstFrame(int keyCode);
     bool IsHold(int keyCode);
+    bool IsUpFirstFrame(int keyCode);
 
     void SetKeyDown(int keyCode, bool isDown);
     void ClearAllKeys();
 
 private:
-    BYTE m_key[256];
-    BYTE m_keyPrev[256];
+    BYTE m_key[256] = { };
+    BYTE m_keyPrev[256] = { };
     std::deque<std::vector<BYTE>> m_keyDeque;
 };
 
@@ -98,6 +104,7 @@ public:
 
     // 0.5秒以上長押ししていた
     static bool IsHold(int keyCode);
+    static bool IsUpFirstFrame(int keyCode);
 private:
     static IKeyBoard* m_keyboard;
 };
@@ -119,7 +126,7 @@ public:
     static bool IsDown(const char key);
     static bool IsDownFirstFrame(const char key);
     static bool IsHold(const char key);
-    static bool IsUp(const char key);
+    static bool IsUpFirstFrame(const char key);
     static bool IsInWindow();
     static bool IsVisible();
     static void SetVisible(bool isVisible);
@@ -174,7 +181,7 @@ public:
     virtual bool IsDown(GamePadButton button) = 0;
     virtual bool IsDownFirstFrame(GamePadButton button) = 0;
     virtual bool IsHold(GamePadButton button) = 0;
-    virtual bool IsUp(GamePadButton button) = 0;
+    virtual bool IsUpFirstFrame(GamePadButton button) = 0;
     virtual GamePadStick GetStickL() = 0;
     virtual GamePadStick GetStickR() = 0;
 };
@@ -189,7 +196,7 @@ public:
     bool IsDown(GamePadButton button) override;
     bool IsDownFirstFrame(GamePadButton button) override;
     bool IsHold(GamePadButton button) override;
-    bool IsUp(GamePadButton button) override;
+    bool IsUpFirstFrame(GamePadButton button) override;
     GamePadStick GetStickL() override;
     GamePadStick GetStickR() override;
 
@@ -208,7 +215,7 @@ public:
     bool IsDown(GamePadButton button) override;
     bool IsDownFirstFrame(GamePadButton button) override;
     bool IsHold(GamePadButton button) override;
-    bool IsUp(GamePadButton button) override;
+    bool IsUpFirstFrame(GamePadButton button) override;
     GamePadStick GetStickL() override;
     GamePadStick GetStickR() override;
 
@@ -230,7 +237,7 @@ public:
     static bool IsDown(GamePadButton button);
     static bool IsDownFirstFrame(GamePadButton button);
     static bool IsHold(GamePadButton button);
-    static bool IsUp(GamePadButton button);
+    static bool IsUpFirstFrame(GamePadButton button);
     static GamePadStick GetStickL();
     static GamePadStick GetStickR();
 
@@ -251,7 +258,7 @@ public:
     static bool IsDown(GamePadButton button);
     static bool IsDownFirstFrame(GamePadButton button);
     static bool IsHold(GamePadButton button);
-    static bool IsUp(GamePadButton button);
+    static bool IsUpFirstFrame(GamePadButton button);
 
     // キーボードのWを押しているとき、
     // ゲームパッドのスティックを上に最大まで倒しているのと

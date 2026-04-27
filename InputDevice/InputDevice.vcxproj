@@ -110,6 +110,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -127,6 +128,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -136,9 +138,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="InputDevice.h" />
+    <ClInclude Include="InputDeviceInternal.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="InputDevice.cpp" />
+    <ClCompile Include="InputDeviceCore.cpp" />
+    <ClCompile Include="InputDeviceGamePad.cpp" />
+    <ClCompile Include="InputDeviceKeyboard.cpp" />
+    <ClCompile Include="InputDeviceMouse.cpp" />
+    <ClCompile Include="InputDeviceShared.cpp" />
+    <ClCompile Include="InputDeviceUnifiedInput.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
