@@ -189,6 +189,7 @@ void DrawInputStatus()
     TCHAR unifiedLeftStatus[32];
     GamePadStick stickL = GamePad::GetStickL();
     GamePadStick stickR = GamePad::GetStickR();
+    GamePadStick unifiedStickL = UnifiedInput::GetStickL();
     D3DCOLOR keyboardColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     D3DCOLOR mouseColor = D3DCOLOR_ARGB(255, 0, 0, 0);
     D3DCOLOR gamePadColor = D3DCOLOR_ARGB(255, 0, 0, 0);
@@ -525,6 +526,15 @@ void DrawInputStatus()
                 unifiedDownStatus,
                 unifiedLeftStatus);
     TextDraw(g_pFont, msg, 20, 730, unifiedInputColor);
+
+    _stprintf_s(msg,
+                256,
+                _T("UnifiedInput StickL: x:% .2f  y:% .2f  power:%.2f  angle:% .2f"),
+                unifiedStickL.x,
+                unifiedStickL.y,
+                unifiedStickL.power,
+                unifiedStickL.angle);
+    TextDraw(g_pFont, msg, 20, 760, unifiedInputColor);
 
 }
 

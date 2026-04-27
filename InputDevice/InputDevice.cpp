@@ -261,6 +261,29 @@ void UpdateMousePosition()
         return value;
     }
 
+    GamePadStick CreateStickFromFloatAxis(float x, float y)
+    {
+        GamePadStick stick = { };
+
+        stick.x = ClampFloat(x, -1.0f, 1.0f);
+        stick.y = ClampFloat(y, -1.0f, 1.0f);
+        stick.x = ApplyGamePadStickDeadZone(stick.x);
+        stick.y = ApplyGamePadStickDeadZone(stick.y);
+
+        stick.power = std::sqrt((stick.x * stick.x) + (stick.y * stick.y));
+        stick.power = ClampFloat(stick.power, 0.0f, 1.0f);
+
+        if (stick.power <= 0.0f)
+        {
+            stick.angle = 0.0f;
+            return stick;
+        }
+
+        stick.angle = std::atan2(stick.y, stick.x);
+        stick.angle = ApplyGamePadStickDeadZone(stick.angle);
+        return stick;
+    }
+
     GamePadStick CreateGamePadStick(LONG xAxis, LONG yAxis)
     {
         GamePadStick stick = { };
@@ -1769,6 +1792,40 @@ bool UnifiedInput::IsUp(GamePadButton button)
     }
 
     return !SKeyBoard::IsDown(keyCode);
+}
+
+GamePadStick UnifiedInput::GetStickL()
+{
+    GamePadStick gamePadStick = GamePad::GetStickL();
+    float x = gamePadStick.x;
+    float y = gamePadStick.y;
+
+    if (SKeyBoard::IsDown(DIK_A))
+    {
+        x -= 1.0f;
+    }
+
+    if (SKeyBoard::IsDown(DIK_D))
+    {
+        x += 1.0f;
+    }
+
+    if (SKeyBoard::IsDown(DIK_W))
+    {
+        y += 1.0f;
+    }
+
+    if (SKeyBoard::IsDown(DIK_S))
+    {
+        y -= 1.0f;
+    }
+
+    return CreateStickFromFloatAxis(x, y);
+}
+
+GamePadStick UnifiedInput::GetStickR()
+{
+    return GamePad::GetStickR();
 }
 
 }
