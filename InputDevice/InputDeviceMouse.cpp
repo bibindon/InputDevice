@@ -138,7 +138,7 @@ bool Mouse::Update()
     return true;
 }
 
-bool Mouse::IsDown(const char key)
+bool Mouse::IsDown(MouseButton key)
 {
     if (!IsValidMouseButtonIndex(key))
     {
@@ -148,7 +148,7 @@ bool Mouse::IsDown(const char key)
     return (g_mouseState.rgbButtons[(std::size_t)key] & 0x80) != 0;
 }
 
-bool Mouse::IsDownFirstFrame(const char key)
+bool Mouse::IsDownFirstFrame(MouseButton key)
 {
     if (!IsValidMouseButtonIndex(key))
     {
@@ -161,7 +161,7 @@ bool Mouse::IsDownFirstFrame(const char key)
     return isDown && !wasDown;
 }
 
-bool Mouse::IsHold(const char key)
+bool Mouse::IsHold(MouseButton key)
 {
     if (!IsValidMouseButtonIndex(key))
     {
@@ -184,7 +184,7 @@ bool Mouse::IsHold(const char key)
     return true;
 }
 
-bool Mouse::IsUpFirstFrame(const char key)
+bool Mouse::IsUpFirstFrame(MouseButton key)
 {
     if (!IsValidMouseButtonIndex(key))
     {
@@ -222,6 +222,11 @@ void Mouse::SetVisible(bool isVisible)
 MousePosition Mouse::GetPosition()
 {
     return g_mousePosition;
+}
+
+long Mouse::GetWheelDelta()
+{
+    return g_mouseState.lZ;
 }
 
 MousePosition Mouse::GetDelta(GamePadStick* stick)

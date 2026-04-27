@@ -7,6 +7,7 @@
 
 #include <dinput.h>
 #include <deque>
+#include <map>
 #include <vector>
 
 namespace InputDevice
@@ -115,6 +116,15 @@ struct MousePosition
     long y;
 };
 
+enum MouseButton
+{
+    MOUSE_LEFT = 0,
+    MOUSE_RIGHT = 1,
+    MOUSE_MIDDLE = 2,
+    MOUSE_SIDE1 = 3,
+    MOUSE_SIDE2 = 4,
+};
+
 struct GamePadStick;
 class Mouse
 {
@@ -123,14 +133,15 @@ public:
     static bool Finalize();
     static bool Update();
 
-    static bool IsDown(const char key);
-    static bool IsDownFirstFrame(const char key);
-    static bool IsHold(const char key);
-    static bool IsUpFirstFrame(const char key);
+    static bool IsDown(MouseButton key);
+    static bool IsDownFirstFrame(MouseButton key);
+    static bool IsHold(MouseButton key);
+    static bool IsUpFirstFrame(MouseButton key);
     static bool IsInWindow();
     static bool IsVisible();
     static void SetVisible(bool isVisible);
     static MousePosition GetPosition();
+    static long GetWheelDelta();
 
     // 前フレームからの移動量
     static MousePosition GetDelta(GamePadStick* stick = nullptr);
@@ -259,6 +270,7 @@ public:
     static bool IsDownFirstFrame(GamePadButton button);
     static bool IsHold(GamePadButton button);
     static bool IsUpFirstFrame(GamePadButton button);
+    static void SetKeyCode(GamePadButton button, int keyCode);
 
     // キーボードのWを押しているとき、
     // ゲームパッドのスティックを上に最大まで倒しているのと

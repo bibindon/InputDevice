@@ -43,7 +43,7 @@ float g_cameraPitch = 0.0f;
 static void TextDraw(LPD3DXFONT pFont, const std::wstring& text, int X, int Y, D3DCOLOR color = D3DCOLOR_ARGB(255, 0, 0, 0));
 static void DrawInputStatus();
 static std::wstring SetGamePadButtonStatus(GamePadButton button, D3DCOLOR* color);
-static std::wstring GetMouseButtonStatus(char button, D3DCOLOR* color);
+static std::wstring GetMouseButtonStatus(MouseButton button, D3DCOLOR* color);
 static std::wstring GetUnifiedInputStatus(GamePadButton button, D3DCOLOR* color);
 static std::wstring KeyCodeToString(int keyCode);
 static std::wstring FormatText(const wchar_t* format, ...);
@@ -182,6 +182,7 @@ void DrawInputStatus()
     std::wstring cursorVisibleText = L"Hidden";
     std::wstring mouseInWindowText = L"Out";
     MousePosition mousePosition = Mouse::GetPosition();
+    long mouseWheelDelta = Mouse::GetWheelDelta();
     GamePadStick gamePadStick;
     MousePosition mouseDelta = Mouse::GetDelta(&gamePadStick);
     GamePadStick stickL = GamePad::GetStickL();
@@ -265,9 +266,10 @@ void DrawInputStatus()
              115);
 
     TextDraw(g_pFont,
-             FormatText(L"Mouse: Left / Right / Middle  x:%ld  y:%ld  %s",
+             FormatText(L"Mouse: Left / Right / Middle / Side1 / Side2  x:%ld  y:%ld  wheel:%ld  %s",
                         mousePosition.x,
                         mousePosition.y,
+                        mouseWheelDelta,
                         mouseInWindowText.c_str()),
              20,
              140);
@@ -283,15 +285,19 @@ void DrawInputStatus()
              20,
              160);
 
-    std::wstring leftMouseStatus = GetMouseButtonStatus(0, &mouseColor);
-    std::wstring rightMouseStatus = GetMouseButtonStatus(1, &mouseColor);
-    std::wstring middleMouseStatus = GetMouseButtonStatus(2, &mouseColor);
+    std::wstring leftMouseStatus = GetMouseButtonStatus(MOUSE_LEFT, &mouseColor);
+    std::wstring rightMouseStatus = GetMouseButtonStatus(MOUSE_RIGHT, &mouseColor);
+    std::wstring middleMouseStatus = GetMouseButtonStatus(MOUSE_MIDDLE, &mouseColor);
+    std::wstring side1MouseStatus = GetMouseButtonStatus(MOUSE_SIDE1, &mouseColor);
+    std::wstring side2MouseStatus = GetMouseButtonStatus(MOUSE_SIDE2, &mouseColor);
 
     TextDraw(g_pFont,
-             FormatText(L"L:%s  R:%s  M:%s",
+             FormatText(L"L:%s  R:%s  M:%s  S1:%s  S2:%s",
                         leftMouseStatus.c_str(),
                         rightMouseStatus.c_str(),
-                        middleMouseStatus.c_str()),
+                        middleMouseStatus.c_str(),
+                        side1MouseStatus.c_str(),
+                        side2MouseStatus.c_str()),
              20,
              180,
              mouseColor);
@@ -401,6 +407,42 @@ void DrawInputStatus()
              730,
              unifiedInputColor);
 
+    TextDraw(g_pFont, L"UnifiedInput: X / Y / A / B", 20, 760);
+
+    unifiedInputColor = D3DCOLOR_ARGB(255, 0, 0, 0);
+    std::wstring unifiedAStatus = GetUnifiedInputStatus(GAMEPAD_A, &unifiedInputColor);
+    std::wstring unifiedBStatus = GetUnifiedInputStatus(GAMEPAD_B, &unifiedInputColor);
+    std::wstring unifiedXStatus = GetUnifiedInputStatus(GAMEPAD_X, &unifiedInputColor);
+    std::wstring unifiedYStatus = GetUnifiedInputStatus(GAMEPAD_Y, &unifiedInputColor);
+
+    TextDraw(g_pFont,
+             FormatText(L"X:%s  Y:%s  A:%s  B:%s",
+                        unifiedXStatus.c_str(),
+                        unifiedYStatus.c_str(),
+                        unifiedAStatus.c_str(),
+                        unifiedBStatus.c_str()),
+             20,
+             790,
+             unifiedInputColor);
+
+    TextDraw(g_pFont, L"UnifiedInput: R1 / R2 / L1 / L2", 20, 820);
+
+    unifiedInputColor = D3DCOLOR_ARGB(255, 0, 0, 0);
+    std::wstring unifiedR1Status = GetUnifiedInputStatus(GAMEPAD_R1, &unifiedInputColor);
+    std::wstring unifiedR2Status = GetUnifiedInputStatus(GAMEPAD_R2, &unifiedInputColor);
+    std::wstring unifiedL1Status = GetUnifiedInputStatus(GAMEPAD_L1, &unifiedInputColor);
+    std::wstring unifiedL2Status = GetUnifiedInputStatus(GAMEPAD_L2, &unifiedInputColor);
+
+    TextDraw(g_pFont,
+             FormatText(L"R1:%s  R2:%s  L1:%s  L2:%s",
+                        unifiedR1Status.c_str(),
+                        unifiedR2Status.c_str(),
+                        unifiedL1Status.c_str(),
+                        unifiedL2Status.c_str()),
+             20,
+             850,
+             unifiedInputColor);
+
     TextDraw(g_pFont,
              FormatText(L"UnifiedInput StickL: x:% .2f  y:% .2f  power:%.2f  angle:% .2f",
                         unifiedStickL.x,
@@ -408,7 +450,7 @@ void DrawInputStatus()
                         unifiedStickL.power,
                         unifiedStickL.angle),
              20,
-             760,
+             880,
              unifiedInputColor);
 
     TextDraw(g_pFont,
@@ -418,12 +460,12 @@ void DrawInputStatus()
                         unifiedStickR.power,
                         unifiedStickR.angle),
              20,
-             790,
+             910,
              unifiedInputColor);
 
 }
 
-std::wstring GetMouseButtonStatus(char button, D3DCOLOR* color)
+std::wstring GetMouseButtonStatus(MouseButton button, D3DCOLOR* color)
 {
     if (Mouse::IsDown(button))
     {

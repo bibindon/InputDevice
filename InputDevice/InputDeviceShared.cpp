@@ -47,10 +47,25 @@ const LONG kGamePadAxisMax = 1000;
 const float kGamePadStickDeadZone = 0.05f;
 const BYTE kGamePadXTriggerThreshold = 30;
 const ULONGLONG kGamePadSearchIntervalMilliseconds = 5000;
+std::multimap<int, int> g_unifiedInputKeyMap;
 
-bool IsValidMouseButtonIndex(char key)
+namespace
 {
-    return 0 <= key && key < static_cast<char>(kMouseButtonCount);
+    struct UnifiedInputKeyMapInitializer
+    {
+        UnifiedInputKeyMapInitializer()
+        {
+            ResetUnifiedInputKeyMap();
+        }
+    };
+
+    UnifiedInputKeyMapInitializer g_unifiedInputKeyMapInitializer;
+}
+
+bool IsValidMouseButtonIndex(MouseButton key)
+{
+    int buttonIndex = static_cast<int>(key);
+    return 0 <= buttonIndex && static_cast<std::size_t>(buttonIndex) < kMouseButtonCount;
 }
 
 bool GetMouseWindowCenterScreenPosition(POINT* centerPosition)
@@ -206,26 +221,28 @@ bool IsGamePadPOVButton(GamePadButton button)
     return false;
 }
 
-int GetUnifiedInputKeyCode(GamePadButton button)
+void ResetUnifiedInputKeyMap()
 {
-    if (button == GAMEPAD_POV_UP)
+    g_unifiedInputKeyMap.clear();
+    g_unifiedInputKeyMap.emplace(GAMEPAD_A, DIK_ESCAPE);
+    g_unifiedInputKeyMap.emplace(GAMEPAD_B, DIK_RETURN);
+    g_unifiedInputKeyMap.emplace(GAMEPAD_B, DIK_SPACE);
+    g_unifiedInputKeyMap.emplace(GAMEPAD_POV_UP, DIK_UP);
+    g_unifiedInputKeyMap.emplace(GAMEPAD_POV_RIGHT, DIK_RIGHT);
+    g_unifiedInputKeyMap.emplace(GAMEPAD_POV_DOWN, DIK_DOWN);
+    g_unifiedInputKeyMap.emplace(GAMEPAD_POV_LEFT, DIK_LEFT);
+}
+
+int GetUnifiedInputMouseButton(GamePadButton button)
+{
+    if (button == GAMEPAD_R1)
     {
-        return DIK_UP;
+        return static_cast<int>(MOUSE_LEFT);
     }
 
-    if (button == GAMEPAD_POV_RIGHT)
+    if (button == GAMEPAD_R2)
     {
-        return DIK_RIGHT;
-    }
-
-    if (button == GAMEPAD_POV_DOWN)
-    {
-        return DIK_DOWN;
-    }
-
-    if (button == GAMEPAD_POV_LEFT)
-    {
-        return DIK_LEFT;
+        return static_cast<int>(MOUSE_RIGHT);
     }
 
     return -1;

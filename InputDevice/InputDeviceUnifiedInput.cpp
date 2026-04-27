@@ -5,13 +5,37 @@ namespace InputDevice
 
 using namespace Internal;
 
+namespace
+{
+    bool IsUnifiedInputKeyTriggered(GamePadButton button, bool(*predicate)(int))
+    {
+        if (predicate == nullptr)
+        {
+            return false;
+        }
+
+        auto range = g_unifiedInputKeyMap.equal_range(static_cast<int>(button));
+        for (auto it = range.first; it != range.second; ++it)
+        {
+            if (predicate(it->second))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
 bool UnifiedInput::Initialize()
 {
+    ResetUnifiedInputKeyMap();
     return true;
 }
 
 bool UnifiedInput::Finalize()
 {
+    ResetUnifiedInputKeyMap();
     return true;
 }
 
@@ -27,13 +51,18 @@ bool UnifiedInput::IsDown(GamePadButton button)
         return true;
     }
 
-    int keyCode = GetUnifiedInputKeyCode(button);
-    if (keyCode < 0)
+    if (IsUnifiedInputKeyTriggered(button, SKeyBoard::IsDown))
     {
-        return false;
+        return true;
     }
 
-    return SKeyBoard::IsDown(keyCode);
+    int mouseButton = GetUnifiedInputMouseButton(button);
+    if (0 <= mouseButton)
+    {
+        return Mouse::IsDown(static_cast<MouseButton>(mouseButton));
+    }
+
+    return false;
 }
 
 bool UnifiedInput::IsDownFirstFrame(GamePadButton button)
@@ -43,13 +72,18 @@ bool UnifiedInput::IsDownFirstFrame(GamePadButton button)
         return true;
     }
 
-    int keyCode = GetUnifiedInputKeyCode(button);
-    if (keyCode < 0)
+    if (IsUnifiedInputKeyTriggered(button, SKeyBoard::IsDownFirstFrame))
     {
-        return false;
+        return true;
     }
 
-    return SKeyBoard::IsDownFirstFrame(keyCode);
+    int mouseButton = GetUnifiedInputMouseButton(button);
+    if (0 <= mouseButton)
+    {
+        return Mouse::IsDownFirstFrame(static_cast<MouseButton>(mouseButton));
+    }
+
+    return false;
 }
 
 bool UnifiedInput::IsHold(GamePadButton button)
@@ -59,13 +93,18 @@ bool UnifiedInput::IsHold(GamePadButton button)
         return true;
     }
 
-    int keyCode = GetUnifiedInputKeyCode(button);
-    if (keyCode < 0)
+    if (IsUnifiedInputKeyTriggered(button, SKeyBoard::IsHold))
     {
-        return false;
+        return true;
     }
 
-    return SKeyBoard::IsHold(keyCode);
+    int mouseButton = GetUnifiedInputMouseButton(button);
+    if (0 <= mouseButton)
+    {
+        return Mouse::IsHold(static_cast<MouseButton>(mouseButton));
+    }
+
+    return false;
 }
 
 bool UnifiedInput::IsUpFirstFrame(GamePadButton button)
@@ -75,13 +114,28 @@ bool UnifiedInput::IsUpFirstFrame(GamePadButton button)
         return true;
     }
 
-    int keyCode = GetUnifiedInputKeyCode(button);
-    if (keyCode < 0)
+    if (IsUnifiedInputKeyTriggered(button, SKeyBoard::IsUpFirstFrame))
     {
-        return false;
+        return true;
     }
 
-    return SKeyBoard::IsUpFirstFrame(keyCode);
+    int mouseButton = GetUnifiedInputMouseButton(button);
+    if (0 <= mouseButton)
+    {
+        return Mouse::IsUpFirstFrame(static_cast<MouseButton>(mouseButton));
+    }
+
+    return false;
+}
+
+void UnifiedInput::SetKeyCode(GamePadButton button, int keyCode)
+{
+    if (!IsValidGamePadXButtonStateIndex(button))
+    {
+        return;
+    }
+
+    g_unifiedInputKeyMap.emplace(static_cast<int>(button), keyCode);
 }
 
 GamePadStick UnifiedInput::GetStickL()
