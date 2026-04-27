@@ -26,9 +26,6 @@
     <ClCompile Include="InputDevice.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="InputDeviceCore.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="InputDeviceGamePad.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>

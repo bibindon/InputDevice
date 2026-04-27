@@ -142,7 +142,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="InputDevice.cpp" />
-    <ClCompile Include="InputDeviceCore.cpp" />
     <ClCompile Include="InputDeviceGamePad.cpp" />
     <ClCompile Include="InputDeviceKeyboard.cpp" />
     <ClCompile Include="InputDeviceMouse.cpp" />
