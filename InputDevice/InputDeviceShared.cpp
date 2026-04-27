@@ -30,6 +30,8 @@ DIJOYSTATE2 g_gamePadPrevState = { };
 std::deque<std::vector<BYTE>> g_gamePadButtonDeque;
 std::deque<DWORD> g_gamePadPOVDeque;
 ULONGLONG g_lastGamePadSearchTime = 0;
+ULONGLONG g_lastMouseReconnectTime = 0;
+ULONGLONG g_lastKeyboardReconnectTime = 0;
 XINPUT_STATE g_gamePadXState = { };
 XINPUT_STATE g_gamePadXPrevState = { };
 std::deque<std::vector<BYTE>> g_gamePadXButtonDeque;

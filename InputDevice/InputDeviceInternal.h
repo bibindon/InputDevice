@@ -25,6 +25,8 @@ extern DIJOYSTATE2 g_gamePadPrevState;
 extern std::deque<std::vector<BYTE>> g_gamePadButtonDeque;
 extern std::deque<DWORD> g_gamePadPOVDeque;
 extern ULONGLONG g_lastGamePadSearchTime;
+extern ULONGLONG g_lastMouseReconnectTime;
+extern ULONGLONG g_lastKeyboardReconnectTime;
 extern XINPUT_STATE g_gamePadXState;
 extern XINPUT_STATE g_gamePadXPrevState;
 extern std::deque<std::vector<BYTE>> g_gamePadXButtonDeque;

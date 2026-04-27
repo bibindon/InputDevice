@@ -7,6 +7,72 @@ namespace InputDevice
 
 using namespace Internal;
 
+namespace
+{
+    void ResetMouseState()
+    {
+        ZeroMemory(&g_mouseState, sizeof(g_mouseState));
+        ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
+        g_mousePosition = { };
+        g_mousePrevPosition = { };
+        g_mouseDelta = { };
+
+        std::deque<std::vector<BYTE>> emptyDeque;
+        g_mouseButtonDeque.swap(emptyDeque);
+    }
+
+    void ReleaseMouseDevice()
+    {
+        ResetMouseState();
+
+        if (g_mouse != nullptr)
+        {
+            g_mouse->Unacquire();
+            g_mouse->Release();
+            g_mouse = nullptr;
+        }
+    }
+
+    bool TryReconnectMouseDevice()
+    {
+        if (g_directInput == nullptr || g_inputHWnd == nullptr)
+        {
+            return false;
+        }
+
+        HRESULT ret = g_directInput->CreateDevice(GUID_SysMouse, &g_mouse, NULL);
+        if (FAILED(ret))
+        {
+            g_mouse = nullptr;
+            return false;
+        }
+
+        ret = g_mouse->SetDataFormat(&c_dfDIMouse2);
+        if (FAILED(ret))
+        {
+            ReleaseMouseDevice();
+            return false;
+        }
+
+        ret = g_mouse->SetCooperativeLevel(g_inputHWnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
+        if (FAILED(ret))
+        {
+            ReleaseMouseDevice();
+            return false;
+        }
+
+        ret = g_mouse->Acquire();
+        if (FAILED(ret) && ret != DIERR_OTHERAPPHASPRIO && ret != DIERR_NOTACQUIRED)
+        {
+            ReleaseMouseDevice();
+            return false;
+        }
+
+        ResetMouseState();
+        return true;
+    }
+}
+
 bool Mouse::Initialize()
 {
     if (g_directInput == nullptr || g_inputHWnd == nullptr)
@@ -62,38 +128,33 @@ bool Mouse::Initialize()
 
 bool Mouse::Finalize()
 {
-    ZeroMemory(&g_mouseState, sizeof(g_mouseState));
-    ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
-    g_mousePosition = { };
-    g_mousePrevPosition = { };
-    g_mouseDelta = { };
     ApplyMouseCursorVisible(true);
-
-    std::deque<std::vector<BYTE>> emptyDeque;
-    g_mouseButtonDeque.swap(emptyDeque);
-
-    if (g_mouse != nullptr)
-    {
-        g_mouse->Unacquire();
-        g_mouse->Release();
-        g_mouse = nullptr;
-    }
+    ReleaseMouseDevice();
 
     return true;
 }
 
 bool Mouse::Update()
 {
+    ULONGLONG currentTime = GetTickCount64();
+
+    // デバイスが抜けている場合に再接続を試みる
+    if (g_mouse == nullptr)
+    {
+        if (currentTime - g_lastMouseReconnectTime >= kGamePadSearchIntervalMilliseconds &&
+            g_directInput != nullptr)
+        {
+            g_lastMouseReconnectTime = currentTime;
+            TryReconnectMouseDevice();
+        }
+        return false;
+    }
+
     g_mousePrevPosition = g_mousePosition;
 
     UpdateMousePosition();
     g_mouseDelta.x = 0;
     g_mouseDelta.y = 0;
-
-    if (g_mouse == nullptr)
-    {
-        return false;
-    }
 
     memcpy(&g_mousePrevState, &g_mouseState, sizeof(g_mouseState));
     ZeroMemory(&g_mouseState, sizeof(g_mouseState));
@@ -101,15 +162,35 @@ bool Mouse::Update()
     HRESULT ret = g_mouse->GetDeviceState(sizeof(g_mouseState), &g_mouseState);
     if (FAILED(ret))
     {
-        ret = g_mouse->Acquire();
-        if (FAILED(ret))
+        bool isRecovered = false;
+
+        if (ret == DIERR_INPUTLOST)
+        {
+            ret = g_mouse->Acquire();
+            if (SUCCEEDED(ret))
+            {
+                ret = g_mouse->GetDeviceState(sizeof(g_mouseState), &g_mouseState);
+                if (SUCCEEDED(ret))
+                {
+                    isRecovered = true;
+                }
+            }
+
+            if (!isRecovered &&
+                (ret == DIERR_OTHERAPPHASPRIO || ret == DIERR_NOTACQUIRED || ret == DIERR_INPUTLOST))
+            {
+                return false;
+            }
+        }
+        else if (ret == DIERR_NOTACQUIRED || ret == DIERR_OTHERAPPHASPRIO)
         {
             return false;
         }
 
-        ret = g_mouse->GetDeviceState(sizeof(g_mouseState), &g_mouseState);
-        if (FAILED(ret))
+        if (!isRecovered)
         {
+            ReleaseMouseDevice();
+            g_lastMouseReconnectTime = currentTime;
             return false;
         }
     }

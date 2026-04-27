@@ -7,6 +7,88 @@ namespace InputDevice
 
 using namespace Internal;
 
+namespace
+{
+    void ResetKeyboardState(BYTE key[256],
+                            BYTE keyPrev[256],
+                            std::deque<std::vector<BYTE>>* keyDeque)
+    {
+        ZeroMemory(key, 256);
+        ZeroMemory(keyPrev, 256);
+
+        if (keyDeque != nullptr)
+        {
+            std::deque<std::vector<BYTE>> emptyDeque;
+            keyDeque->swap(emptyDeque);
+        }
+    }
+
+    void ReleaseKeyboardDevice(LPDIRECTINPUTDEVICE8* keyboard,
+                               BYTE key[256],
+                               BYTE keyPrev[256],
+                               std::deque<std::vector<BYTE>>* keyDeque)
+    {
+        ResetKeyboardState(key, keyPrev, keyDeque);
+
+        if (keyboard != nullptr && *keyboard != nullptr)
+        {
+            (*keyboard)->Unacquire();
+            (*keyboard)->Release();
+            *keyboard = nullptr;
+        }
+    }
+
+    bool TryReconnectKeyboardDevice(LPDIRECTINPUTDEVICE8* keyboard,
+                                    BYTE key[256],
+                                    BYTE keyPrev[256],
+                                    std::deque<std::vector<BYTE>>* keyDeque)
+    {
+        if (keyboard == nullptr)
+        {
+            return false;
+        }
+
+        if (g_directInput == nullptr || g_inputHWnd == nullptr)
+        {
+            return false;
+        }
+
+        HRESULT reconnectRet = g_directInput->CreateDevice(GUID_SysKeyboard, keyboard, NULL);
+        if (FAILED(reconnectRet))
+        {
+            *keyboard = nullptr;
+            return false;
+        }
+
+        reconnectRet = (*keyboard)->SetDataFormat(&c_dfDIKeyboard);
+        if (FAILED(reconnectRet))
+        {
+            ReleaseKeyboardDevice(keyboard, key, keyPrev, keyDeque);
+            return false;
+        }
+
+        reconnectRet = (*keyboard)->SetCooperativeLevel(g_inputHWnd,
+                                                        DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
+        if (FAILED(reconnectRet))
+        {
+            ReleaseKeyboardDevice(keyboard, key, keyPrev, keyDeque);
+            return false;
+        }
+
+        reconnectRet = (*keyboard)->Acquire();
+        if (FAILED(reconnectRet) &&
+            reconnectRet != DIERR_OTHERAPPHASPRIO &&
+            reconnectRet != DIERR_NOTACQUIRED)
+        {
+            ReleaseKeyboardDevice(keyboard, key, keyPrev, keyDeque);
+            return false;
+        }
+
+        ResetKeyboardState(key, keyPrev, keyDeque);
+        return true;
+    }
+}
+
 void KeyBoard::Initialize(LPDIRECTINPUT8 directInput, HWND hWnd)
 {
     ZeroMemory(m_key, sizeof(m_key));
@@ -93,13 +175,56 @@ bool SKeyBoard::IsUpFirstFrame(int keyCode)
 
 void KeyBoard::Update()
 {
+    ULONGLONG currentTime = GetTickCount64();
+
+    if (m_keyboard == nullptr)
+    {
+        if (currentTime - g_lastKeyboardReconnectTime >= kGamePadSearchIntervalMilliseconds &&
+            g_directInput != nullptr)
+        {
+            g_lastKeyboardReconnectTime = currentTime;
+            TryReconnectKeyboardDevice(&m_keyboard, m_key, m_keyPrev, &m_keyDeque);
+        }
+
+        return;
+    }
+
     memcpy(m_keyPrev, m_key, 256);
     ZeroMemory(m_key, sizeof(m_key));
     HRESULT ret = m_keyboard->GetDeviceState(sizeof(m_key), m_key);
     if (FAILED(ret))
     {
-        m_keyboard->Acquire();
-        m_keyboard->GetDeviceState(sizeof(m_key), m_key);
+        bool isRecovered = false;
+
+        if (ret == DIERR_INPUTLOST)
+        {
+            ret = m_keyboard->Acquire();
+            if (SUCCEEDED(ret))
+            {
+                ret = m_keyboard->GetDeviceState(sizeof(m_key), m_key);
+                if (SUCCEEDED(ret))
+                {
+                    isRecovered = true;
+                }
+            }
+
+            if (!isRecovered &&
+                (ret == DIERR_OTHERAPPHASPRIO || ret == DIERR_NOTACQUIRED || ret == DIERR_INPUTLOST))
+            {
+                return;
+            }
+        }
+        else if (ret == DIERR_NOTACQUIRED || ret == DIERR_OTHERAPPHASPRIO)
+        {
+            return;
+        }
+
+        if (!isRecovered)
+        {
+            ReleaseKeyboardDevice(&m_keyboard, m_key, m_keyPrev, &m_keyDeque);
+            g_lastKeyboardReconnectTime = currentTime;
+            return;
+        }
     }
 
     std::vector<BYTE> temp(256);
@@ -125,15 +250,7 @@ void KeyBoard::Update()
 
 void KeyBoard::Finalize()
 {
-    std::deque<std::vector<BYTE>> emptyDeque;
-    m_keyDeque.swap(emptyDeque);
-
-    if (m_keyboard != nullptr)
-    {
-        m_keyboard->Unacquire();
-        m_keyboard->Release();
-        m_keyboard = nullptr;
-    }
+    ReleaseKeyboardDevice(&m_keyboard, m_key, m_keyPrev, &m_keyDeque);
 }
 
 bool KeyBoard::IsDown(int keyCode)

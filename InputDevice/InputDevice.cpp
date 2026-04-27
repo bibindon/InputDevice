@@ -22,6 +22,8 @@ void Initialize(HINSTANCE hInstance, HWND hWnd)
     Mouse::Initialize();
     g_gamePadD.Initialize();
     g_gamePadX.Initialize();
+    g_lastMouseReconnectTime = GetTickCount64();
+    g_lastKeyboardReconnectTime = GetTickCount64();
 }
 
 void Update()
