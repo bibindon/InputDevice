@@ -17,6 +17,10 @@ void Initialize(HINSTANCE hInstance, HWND hWnd);
 void Update();
 void Finalize();
 
+// このライブラリは毎フレーム Update を呼び、
+// 「今の状態」と「1フレーム前の状態」を比べて
+// Down/First/Hold/UpFirst を判定する作りになっている。
+
 // テストコードでモックキーボードクラスを作って使いたい。
 // そのために継承を使う。
 // 継承を使うためstaticにできない。
@@ -112,6 +116,8 @@ private:
 
 struct MousePosition
 {
+    // クライアント座標系。
+    // ウィンドウ左上が(0, 0)になる。
     long x;
     long y;
 };
@@ -175,12 +181,16 @@ struct GamePadStick
     // x/yは-1.0～1.0。yは上方向をプラスとして扱う。
     float x;
     float y;
-    // powerは倒れ具合。0.0～1.0。
+    // powerは倒れ具合。通常は0.0～1.0。
+    // ただしマウス移動を疑似スティックへ変換するときは、
+    // 入力の強さをそのまま見たいため 1.0 を超えることがある。
     float power;
     // angleは方向角。右が0、上が約1.57ラジアン。
     float angle;
 };
 
+// DirectInput版とXInput版で共通の呼び出し方をそろえるためのインターフェース。
+// 呼び出し側は「どのAPIで入力を取っているか」を意識しなくてよい。
 class IGamePad
 {
 public:
@@ -238,6 +248,8 @@ IGamePad* GetGamePadX();
 
 // DirectInput/XInputの違いを意識せずに使うためのstaticクラス。
 // 両方有効ならXInputを優先する。
+// Xbox系コントローラーは XInput の方が割り当てが安定しやすいため、
+// 両方つかめた場合は XInput を返す。
 class GamePad
 {
 public:
@@ -259,6 +271,8 @@ private:
 // 例えば、IsDown(Up)を実行すると
 // ゲームパッドの十字キーの上を押されているときにtrueが返ってくるが
 // キーボードの上矢印を押していてもtrueが返ってくる。
+// ゲーム側は「決定」「キャンセル」「移動」のような意味を見て、
+// 実際に何のデバイスが押されたかはこのクラスに吸収させるイメージ。
 class UnifiedInput
 {
 public:

@@ -24,6 +24,8 @@ bool GamePad_D::Initialize()
     g_gamePadPOVDeque.clear();
     g_lastGamePadSearchTime = GetTickCount64();
 
+    // DirectInput のゲームパッドは OS 上のデバイス列挙から探す。
+    // まずは接続済みコントローラーを1台見つけてつかむ構成。
     HRESULT ret = g_directInput->EnumDevices(DI8DEVCLASS_GAMECTRL,
                                              EnumGamePadCallback,
                                              NULL,
@@ -41,6 +43,8 @@ bool GamePad_D::Initialize()
         return false;
     }
 
+    // ジョイスティック系は軸レンジが機種依存になりやすい。
+    // ここで共通レンジへそろえておくと以後の正規化が簡単になる。
     SetGamePadAxisRange(DIJOFS_X);
     SetGamePadAxisRange(DIJOFS_Y);
     SetGamePadAxisRange(DIJOFS_Z);
@@ -80,6 +84,7 @@ bool GamePad_D::Update()
         if (g_lastGamePadSearchTime == 0 ||
             currentTime - g_lastGamePadSearchTime >= kGamePadSearchIntervalMilliseconds)
         {
+            // 未接続中は毎フレーム列挙せず、一定間隔でだけ再探索する。
             g_gamePadD.Initialize();
         }
 
@@ -92,6 +97,8 @@ bool GamePad_D::Update()
     HRESULT ret = g_gamePad->Poll();
     if (FAILED(ret))
     {
+        // Poll はジョイスティック系で現在状態を更新するための呼び出し。
+        // 失敗したら Acquire で取り直しを試す。
         ret = g_gamePad->Acquire();
         if (FAILED(ret))
         {
@@ -119,6 +126,8 @@ bool GamePad_D::Update()
     }
 
     std::vector<BYTE> temp(kGamePadButtonCount);
+    // DirectInput の通常ボタンと POV 履歴を分けて残すことで、
+    // 十字キーも First/Hold/UpFirst で扱えるようにしている。
     std::copy(&g_gamePadState.rgbButtons[0],
               &g_gamePadState.rgbButtons[kGamePadButtonCount],
               temp.begin());
@@ -144,6 +153,8 @@ bool GamePad_D::IsDown(GamePadButton button)
 {
     if (IsGamePadPOVButton(button))
     {
+        // DirectInput の十字キーは rgbButtons ではなく POV 角度で来るため、
+        // 通常ボタンとは別の判定関数を通す。
         return IsGamePadCurrentPOVButtonPressed(button);
     }
 
@@ -271,6 +282,8 @@ bool GamePad_X::Initialize()
     ZeroMemory(&g_gamePadXPrevState, sizeof(g_gamePadXPrevState));
     g_gamePadXButtonDeque.clear();
 
+    // XInput は DirectInput のような列挙ではなく、
+    // まず 0 番パッドに問い合わせて接続有無を見る。
     DWORD ret = XInputGetState(0, &g_gamePadXState);
     if (ret == ERROR_SUCCESS)
     {
@@ -300,6 +313,7 @@ bool GamePad_X::Update()
     memcpy(&g_gamePadXPrevState, &g_gamePadXState, sizeof(g_gamePadXState));
     ZeroMemory(&g_gamePadXState, sizeof(g_gamePadXState));
 
+    // XInput は Poll 不要で、XInputGetState を呼ぶたびに最新状態が返る。
     DWORD ret = XInputGetState(0, &g_gamePadXState);
     if (ret != ERROR_SUCCESS)
     {
@@ -311,6 +325,8 @@ bool GamePad_X::Update()
     g_gamePadXConnected = true;
 
     std::vector<BYTE> temp(kGamePadXButtonStateCount);
+    // XInput の各ビット状態を、ライブラリ共通の GamePadButton 添字へ詰め直す。
+    // こうしておくと Hold/First 判定を DirectInput 版と同じ作りで共有できる。
     SetGamePadXButtonState(&temp, GAMEPAD_X);
     SetGamePadXButtonState(&temp, GAMEPAD_A);
     SetGamePadXButtonState(&temp, GAMEPAD_B);
@@ -471,6 +487,8 @@ bool GamePad::Update()
     bool isDirectInputUpdated = g_gamePadD.Update();
     bool isXInputUpdated = g_gamePadX.Update();
 
+    // 戻り値も XInput 優先にしておくと、
+    // 呼び出し側は「今どちらが生きているか」を細かく見なくて済む。
     if (isXInputUpdated)
     {
         return true;

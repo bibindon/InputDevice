@@ -64,6 +64,9 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
                      _In_ int nCmdShow)
 {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+
+    // timeBeginPeriod(1) で Sleep の粒度を上げる。
+    // DirectX 自体の機能ではなく、Windows 全体のタイマ精度設定。
     timeBeginPeriod(1);
 
     WNDCLASSEX wc { };
@@ -124,6 +127,8 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance,
         }
         else
         {
+            // このサンプルは固定60FPS保証ではなく、
+            // 軽く待ってから毎フレーム Update と Render を回す作り。
             Sleep(16);
 
             Update();
@@ -198,6 +203,8 @@ void DrawInputStatus()
 
     TextDraw(g_pFont, FormatText(L"FPS: %.2f", GetFps()), 20, 20);
 
+    // ここから先は、各入力クラスの現在状態を文字で見える化している。
+    // ライブラリの動作確認用 UI なので、実ゲームの HUD より説明重視。
     TextDraw(g_pFont, L"Keyboard Input", 20, 60);
 
     for (int keyCode = 0; keyCode < 256; ++keyCode)
@@ -614,6 +621,8 @@ float GetFps()
     static int frameCount = 0;
     static float fps = 0.0f;
 
+    // QueryPerformanceCounter は高精度タイマ。
+    // DirectX 固有ではなく Windows 標準API だが、FPS 測定によく使われる。
     if (frequency.QuadPart == 0)
     {
         QueryPerformanceFrequency(&frequency);
@@ -643,6 +652,8 @@ void InitD3D(HWND hWnd)
 {
     HRESULT hResult = E_FAIL;
 
+    // Direct3DCreate9 は Direct3D9 本体の入口。
+    // ここからデバイスや各種リソースを作成する。
     g_pD3D = Direct3DCreate9(D3D_SDK_VERSION);
     assert(g_pD3D != NULL);
 
@@ -661,6 +672,9 @@ void InitD3D(HWND hWnd)
     d3dpp.FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
     d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 
+    // PresentationInterval を IMMEDIATE にすると、
+    // 垂直同期を待たずに Present できる。
+    // その代わりティアリングが起きることはある。
     hResult = g_pD3D->CreateDevice(D3DADAPTER_DEFAULT,
                                    D3DDEVTYPE_HAL,
                                    hWnd,
@@ -670,6 +684,8 @@ void InitD3D(HWND hWnd)
 
     if (FAILED(hResult))
     {
+        // ハードウェア頂点処理が使えない環境向けの保険。
+        // ソフトウェア頂点処理へ落としてでも起動できるようにする。
         hResult = g_pD3D->CreateDevice(D3DADAPTER_DEFAULT,
                                        D3DDEVTYPE_HAL,
                                        hWnd,
@@ -697,6 +713,9 @@ void InitD3D(HWND hWnd)
 
     LPD3DXBUFFER pD3DXMtrlBuffer = NULL;
 
+    // .x ファイルからメッシュを読み込む。
+    // D3DXMATERIAL 配列も一緒に返るので、
+    // マテリアルとテクスチャを後で取り出せる。
     hResult = D3DXLoadMeshFromX(_T("cube.x"),
                                 D3DXMESH_SYSTEMMEM,
                                 g_pd3dDevice,
@@ -770,6 +789,8 @@ void InitD3D(HWND hWnd)
 
 void Cleanup()
 {
+    // Direct3D9 では参照関係が残っていると Release しても解放されないことがある。
+    // そのため、先にテクスチャやストリームの参照を切ってから本体を解放する。
     if (g_pd3dDevice != NULL)
     {
         for (DWORD i = 0; i < 8; ++i)
@@ -825,6 +846,8 @@ void Render()
     GamePadStick moveStick = UnifiedInput::GetStickL();
     GamePadStick lookStick = UnifiedInput::GetStickR();
 
+    // 右スティック相当入力で、カメラ位置を注視点の周囲に回り込ませる。
+    // そのため、向きだけを回すのではなく yaw/pitch と距離から位置を再計算する。
     g_cameraYaw += lookStick.x * 0.05f;
     g_cameraPitch += lookStick.y * 0.03f;
 
@@ -841,6 +864,8 @@ void Render()
     D3DXVECTOR3 right(std::cosf(g_cameraYaw), 0.0f, -std::sinf(g_cameraYaw));
     float moveSpeed = 0.2f;
 
+    // 左スティック相当入力ではカメラだけでなく注視点も一緒に平行移動する。
+    // これにより「見ている対象を保ったまま移動する」操作感になる。
     g_cameraTarget += forward * (moveStick.y * moveSpeed);
     g_cameraTarget += right * (moveStick.x * moveSpeed);
 
@@ -892,6 +917,8 @@ void Render()
         {
             for (int x = 0; x < 3; ++x)
             {
+                // 30m 間隔で 3 x 3 x 3 個並べる。
+                // 各キューブは同じメッシュを使い、ワールド行列だけ変える。
                 D3DXMATRIX world;
                 D3DXMatrixTranslation(&world,
                                       (x - 1) * 30.0f,

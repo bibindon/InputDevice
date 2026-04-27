@@ -47,6 +47,8 @@ extern const ULONGLONG kGamePadSearchIntervalMilliseconds;
 extern std::multimap<int, int> g_unifiedInputKeyMap;
 extern std::multimap<int, int> g_unifiedInputMouseButtonMap;
 
+// Mouse は enum を使うが、内部の DirectInput 状態は配列なので
+// 添字として使って問題ない値かを先に確認する。
 bool IsValidMouseButtonIndex(MouseButton key);
 bool GetMouseWindowCenterScreenPosition(POINT* centerPosition);
 void ApplyMouseCursorVisible(bool isVisible);
@@ -54,11 +56,14 @@ void CenterMouseCursorInWindow();
 void UpdateMousePosition();
 bool IsMouseCursorInWindow();
 
+// DirectInput 版は rgbButtons 配列で管理しているため、
+// ボタン番号が配列範囲内かを確認する必要がある。
 bool IsValidGamePadButtonIndex(GamePadButton button);
 bool IsValidGamePadXButtonStateIndex(GamePadButton button);
 bool IsGamePadPOVButton(GamePadButton button);
 void ResetUnifiedInputKeyMap();
 
+// スティック値を -1.0 ～ 1.0 の共通表現へ寄せるための補助関数群。
 float ClampFloat(float value, float minValue, float maxValue);
 float NormalizeGamePadAxis(LONG axis);
 float ApplyGamePadStickDeadZone(float value);
@@ -66,12 +71,16 @@ GamePadStick CreateStickFromFloatAxis(float x, float y);
 GamePadStick CreateGamePadStick(LONG xAxis, LONG yAxis);
 LONG ConvertXInputAxisToGamePadAxis(SHORT axis);
 
+// DirectInput / XInput の差を吸収して、
+// 共通の GamePadButton で見られるようにする。
 bool IsGamePadXButtonPressed(GamePadButton button, const XINPUT_STATE& state);
 IGamePad* GetActiveGamePad();
 void SetGamePadXButtonState(std::vector<BYTE>* buttonState, GamePadButton button);
 void SetGamePadAxisRange(DWORD objectOffset);
 void ReleaseGamePadDDevice();
 
+// DirectInput の POV は「角度」で返ってくるので、
+// 上右下左の論理ボタンへ読み替えるための補助関数。
 bool IsGamePadPOVPressed(DWORD pov, DWORD minValue, DWORD maxValue);
 bool IsGamePadCurrentPOVPressed(DWORD minValue, DWORD maxValue);
 bool IsGamePadPrevPOVPressed(DWORD minValue, DWORD maxValue);

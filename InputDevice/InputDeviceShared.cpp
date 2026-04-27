@@ -54,6 +54,8 @@ std::multimap<int, int> g_unifiedInputMouseButtonMap;
 
 namespace
 {
+    // UnifiedInput の既定割り当てをプログラム起動時点で作っておく。
+    // これにより、利用側が何も設定しなくても最低限の入力統合が使える。
     struct UnifiedInputKeyMapInitializer
     {
         UnifiedInputKeyMapInitializer()
@@ -89,6 +91,8 @@ bool GetMouseWindowCenterScreenPosition(POINT* centerPosition)
         return false;
     }
 
+    // SetCursorPos はスクリーン座標を受け取るため、
+    // いったんクライアント中央を作ってから画面座標へ変換する。
     POINT clientCenter = { };
     clientCenter.x = (clientRect.right - clientRect.left) / 2;
     clientCenter.y = (clientRect.bottom - clientRect.top) / 2;
@@ -105,6 +109,9 @@ bool GetMouseWindowCenterScreenPosition(POINT* centerPosition)
 
 void ApplyMouseCursorVisible(bool isVisible)
 {
+    // ShowCursor は内部カウンタ方式なので、
+    // 1回呼ぶだけでは表示状態が目的どおりにならないことがある。
+    // 条件を満たすまで呼んで確実に合わせる。
     if (isVisible)
     {
         while (ShowCursor(TRUE) < 0)
@@ -134,6 +141,8 @@ void CenterMouseCursorInWindow()
 
 void UpdateMousePosition()
 {
+    // DirectInput の lX/lY は相対移動量だが、
+    // 現在座標の表示には Windows のカーソル位置 API を使う。
     if (g_inputHWnd == nullptr)
     {
         g_mousePosition.x = 0;
@@ -226,6 +235,8 @@ bool IsGamePadPOVButton(GamePadButton button)
 
 void ResetUnifiedInputKeyMap()
 {
+    // multimap を使っているので、
+    // 1つの論理ボタンに対して複数の物理入力を素直に追加できる。
     g_unifiedInputKeyMap.clear();
     g_unifiedInputMouseButtonMap.clear();
     g_unifiedInputKeyMap.emplace(GAMEPAD_A, DIK_ESCAPE);
@@ -257,6 +268,8 @@ float ClampFloat(float value, float minValue, float maxValue)
 
 float NormalizeGamePadAxis(LONG axis)
 {
+    // DirectInput 側では -1000 ～ 1000 にそろえているので、
+    // ここで -1.0 ～ 1.0 の扱いやすい値へ変換する。
     float value = static_cast<float>(axis) / static_cast<float>(kGamePadAxisMax);
     return ClampFloat(value, -1.0f, 1.0f);
 }
@@ -275,6 +288,8 @@ GamePadStick CreateStickFromFloatAxis(float x, float y)
 {
     GamePadStick stick = { };
 
+    // UnifiedInput ではキーボードやマウスも混ざるので、
+    // いったん float の軸値へ足し込んでから共通のスティック形式へ変換する。
     stick.x = ClampFloat(x, -1.0f, 1.0f);
     stick.y = ClampFloat(y, -1.0f, 1.0f);
     stick.x = ApplyGamePadStickDeadZone(stick.x);
@@ -297,6 +312,9 @@ GamePadStick CreateStickFromFloatAxis(float x, float y)
 GamePadStick CreateGamePadStick(LONG xAxis, LONG yAxis)
 {
     GamePadStick stick = { };
+
+    // DirectInput と XInput で縦軸の向きが扱いづらくならないよう、
+    // このライブラリでは「上をプラス」に統一している。
     stick.x = ApplyGamePadStickDeadZone(NormalizeGamePadAxis(xAxis));
     stick.y = ApplyGamePadStickDeadZone(-NormalizeGamePadAxis(yAxis));
 
@@ -316,6 +334,9 @@ GamePadStick CreateGamePadStick(LONG xAxis, LONG yAxis)
 
 LONG ConvertXInputAxisToGamePadAxis(SHORT axis)
 {
+    // XInput は -32768 ～ 32767 付近の値を返す。
+    // DirectInput 版と同じ計算を使いたいので、
+    // 一度このライブラリ共通のレンジへ寄せる。
     float value = static_cast<float>(axis) / 32767.0f;
     value = ClampFloat(value, -1.0f, 1.0f);
     return static_cast<LONG>(value * static_cast<float>(kGamePadAxisMax));
@@ -400,6 +421,8 @@ bool IsGamePadXButtonPressed(GamePadButton button, const XINPUT_STATE& state)
 
 IGamePad* GetActiveGamePad()
 {
+    // XInput がつながっているなら優先する。
+    // Xbox系コントローラーではこちらの方が期待どおりの対応になりやすい。
     if (g_gamePadXConnected)
     {
         return &g_gamePadX;
@@ -443,6 +466,8 @@ void SetGamePadAxisRange(DWORD objectOffset)
         return;
     }
 
+    // DirectInput の軸はデバイスごとに値レンジがばらつくことがある。
+    // ここで共通の -1000 ～ 1000 にそろえておくと後段の計算が単純になる。
     DIPROPRANGE range;
     ZeroMemory(&range, sizeof(range));
     range.diph.dwSize = sizeof(range);
@@ -476,6 +501,9 @@ void ReleaseGamePadDDevice()
 
 bool IsGamePadPOVPressed(DWORD pov, DWORD minValue, DWORD maxValue)
 {
+    // DirectInput の POV は「角度」で返る。
+    // 0xFFFFFFFF は未入力、0 は上、9000 は右、18000 は下、27000 は左に相当する。
+    // 斜め入力も含められるよう、角度の範囲で判定する。
     if (pov == 0xFFFFFFFF)
     {
         return false;
@@ -613,6 +641,8 @@ BOOL CALLBACK EnumGamePadCallback(const DIDEVICEINSTANCE* instance, VOID* contex
 {
     UNREFERENCED_PARAMETER(context);
 
+    // 列挙で見つかった最初の DirectInput ゲームパッドをつかむ。
+    // まずは 1 台だけ扱う前提のシンプルな実装。
     if (g_directInput == nullptr)
     {
         return DIENUM_STOP;

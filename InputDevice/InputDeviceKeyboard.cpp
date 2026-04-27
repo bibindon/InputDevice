@@ -9,6 +9,9 @@ using namespace Internal;
 
 namespace
 {
+    // キーボード切断や再接続のタイミングでは、
+    // 直前の状態が残っていると First/Hold 判定が壊れる。
+    // そのため入力バッファと履歴をまとめて初期化する。
     void ResetKeyboardState(BYTE key[256],
                             BYTE keyPrev[256],
                             std::deque<std::vector<BYTE>>* keyDeque)
@@ -53,6 +56,8 @@ namespace
             return false;
         }
 
+        // GUID_SysKeyboard は「現在のシステムキーボード」を表す。
+        // 物理機器が変わっても、OS が用意するキーボード入力口を取り直すイメージ。
         HRESULT reconnectRet = g_directInput->CreateDevice(GUID_SysKeyboard, keyboard, NULL);
         if (FAILED(reconnectRet))
         {
@@ -67,6 +72,12 @@ namespace
             return false;
         }
 
+        // FOREGROUND:
+        //   このアプリがアクティブな間だけ入力を受け取る。
+        // NONEXCLUSIVE:
+        //   他のアプリや OS と入力を共有する。
+        // NOWINKEY:
+        //   Windows キーによる誤操作を減らしたい意図。
         reconnectRet = (*keyboard)->SetCooperativeLevel(g_inputHWnd,
                                                         DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
         if (FAILED(reconnectRet))
@@ -94,6 +105,12 @@ void KeyBoard::Initialize(LPDIRECTINPUT8 directInput, HWND hWnd)
     ZeroMemory(m_key, sizeof(m_key));
     ZeroMemory(m_keyPrev, sizeof(m_keyPrev));
 
+    // DirectInput では
+    // 1. CreateDevice
+    // 2. SetDataFormat
+    // 3. SetCooperativeLevel
+    // 4. Acquire
+    // の順で使い始めるのが基本になる。
     HRESULT ret = directInput->CreateDevice(GUID_SysKeyboard, &m_keyboard, NULL);
 
     ret = m_keyboard->SetDataFormat(&c_dfDIKeyboard);
@@ -179,6 +196,8 @@ void KeyBoard::Update()
 
     if (m_keyboard == nullptr)
     {
+        // 本当にデバイスを作り直す必要がある場合だけ、
+        // 一定間隔で再接続を試す。
         if (currentTime - g_lastKeyboardReconnectTime >= kGamePadSearchIntervalMilliseconds &&
             g_directInput != nullptr)
         {
@@ -191,6 +210,9 @@ void KeyBoard::Update()
 
     memcpy(m_keyPrev, m_key, 256);
     ZeroMemory(m_key, sizeof(m_key));
+
+    // GetDeviceState で 256 個のキー状態をまとめて取得する。
+    // 各要素の 0x80 ビットが立っていれば「押されている」。
     HRESULT ret = m_keyboard->GetDeviceState(sizeof(m_key), m_key);
     if (FAILED(ret))
     {
@@ -198,6 +220,8 @@ void KeyBoard::Update()
 
         if (ret == DIERR_INPUTLOST)
         {
+            // Alt+Tab などで入力を失っただけなら Acquire で復帰できる。
+            // すぐ復帰できる場合はデバイスを作り直さない。
             ret = m_keyboard->Acquire();
             if (SUCCEEDED(ret))
             {
@@ -221,12 +245,15 @@ void KeyBoard::Update()
 
         if (!isRecovered)
         {
+            // ここまで来たら一時的なロストではなく、
+            // 再作成が必要な状態とみなして解放する。
             ReleaseKeyboardDevice(&m_keyboard, m_key, m_keyPrev, &m_keyDeque);
             g_lastKeyboardReconnectTime = currentTime;
             return;
         }
     }
 
+    // Hold 判定のために直近数秒分の状態履歴を残しておく。
     std::vector<BYTE> temp(256);
     std::copy(&m_key[0], &m_key[256], temp.begin());
     m_keyDeque.push_front(temp);
@@ -276,6 +303,8 @@ bool KeyBoard::IsDownFirstFrame(int keyCode)
 
 bool KeyBoard::IsHold(int keyCode)
 {
+    // 今回は「30フレーム連続で押されている」を Hold としている。
+    // 実時間ではなくフレーム基準なので、FPS が変わると体感時間も変わる。
     if (m_keyDeque.size() <= 30)
     {
         return false;
@@ -328,6 +357,8 @@ void MockKeyBoard::Update()
 {
     memcpy(m_keyPrev, m_key, sizeof(m_key));
 
+    // 実機の KeyBoard と同じ履歴の持ち方をすることで、
+    // Hold や UpFirst も本番と近い形でテストできる。
     std::vector<BYTE> temp(256);
     std::copy(&m_key[0], &m_key[256], temp.begin());
     m_keyDeque.push_front(temp);

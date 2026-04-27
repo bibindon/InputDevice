@@ -7,6 +7,8 @@ using namespace Internal;
 
 namespace
 {
+    // 1つの論理ボタンに複数キーを割り当てられるので、
+    // multimap の範囲を順に見て「どれか1つでも反応したら true」とする。
     bool IsUnifiedInputKeyTriggered(GamePadButton button, bool(*predicate)(int))
     {
         if (predicate == nullptr)
@@ -52,6 +54,7 @@ namespace
             return false;
         }
 
+        // ホイールは押しっぱなしではなく、そのフレームだけのイベント扱い。
         return Mouse::GetWheelDelta() > 0;
     }
 
@@ -68,6 +71,8 @@ namespace
 
 bool UnifiedInput::Initialize()
 {
+    // 既定割り当てを毎回初期化し直すことで、
+    // サンプルやテストで前回設定が残らないようにする。
     ResetUnifiedInputKeyMap();
     return true;
 }
@@ -85,6 +90,8 @@ bool UnifiedInput::Update()
 
 bool UnifiedInput::IsDown(GamePadButton button)
 {
+    // まず本物のゲームパッド入力を見る。
+    // 反応していなければキーボード、マウス、ホイールへ順に広げる。
     if (GamePad::IsDown(button))
     {
         return true;
@@ -190,6 +197,8 @@ void UnifiedInput::SetKeyCode(GamePadButton button, int keyCode)
         return;
     }
 
+    // multimap なので上書きではなく追加。
+    // 既定値を残したまま、別キーを1件ずつ足せる。
     g_unifiedInputKeyMap.emplace(static_cast<int>(button), keyCode);
 }
 
@@ -199,6 +208,8 @@ GamePadStick UnifiedInput::GetStickL()
     float x = gamePadStick.x;
     float y = gamePadStick.y;
 
+    // WASD を「左スティック最大入力」として合成する。
+    // 例えば W と D を同時に押せば右上方向になる。
     if (SKeyBoard::IsDown(DIK_A))
     {
         x -= 1.0f;
@@ -226,6 +237,9 @@ GamePadStick UnifiedInput::GetStickR()
 {
     GamePadStick gamePadStick = GamePad::GetStickR();
     GamePadStick mouseStick = { };
+
+    // マウス移動を右スティック相当として取り込み、
+    // パッドの右スティックと同じ土俵で扱えるようにする。
     Mouse::GetDelta(&mouseStick);
 
     float x = gamePadStick.x + mouseStick.x;

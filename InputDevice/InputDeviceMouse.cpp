@@ -9,6 +9,8 @@ using namespace Internal;
 
 namespace
 {
+    // マウスはボタン状態に加えて座標や相対移動量も持っている。
+    // 再接続時に古い値が残ると表示も判定も壊れるため、まとめてクリアする。
     void ResetMouseState()
     {
         ZeroMemory(&g_mouseState, sizeof(g_mouseState));
@@ -40,6 +42,8 @@ namespace
             return false;
         }
 
+        // GUID_SysMouse は OS が管理している標準マウス入力口。
+        // 物理的に抜き差ししても、再取得すると再び入力を読めることが多い。
         HRESULT ret = g_directInput->CreateDevice(GUID_SysMouse, &g_mouse, NULL);
         if (FAILED(ret))
         {
@@ -93,6 +97,8 @@ bool Mouse::Initialize()
     g_mouseCursorVisible = true;
     g_mouseButtonDeque.clear();
 
+    // マウスはホイールやサイドボタンまで取りたいので、
+    // c_dfDIMouse2 を使って DIMOUSESTATE2 形式で読む。
     HRESULT ret = g_directInput->CreateDevice(GUID_SysMouse, &g_mouse, NULL);
     if (FAILED(ret))
     {
@@ -108,6 +114,8 @@ bool Mouse::Initialize()
         return false;
     }
 
+    // FOREGROUND + NONEXCLUSIVE にすることで、
+    // アプリが前面にある間だけ、OS と共有しながら入力を受け取る。
     ret = g_mouse->SetCooperativeLevel(g_inputHWnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
     if (FAILED(ret))
     {
@@ -138,9 +146,10 @@ bool Mouse::Update()
 {
     ULONGLONG currentTime = GetTickCount64();
 
-    // デバイスが抜けている場合に再接続を試みる
     if (g_mouse == nullptr)
     {
+        // デバイスをいったん失った場合だけ、
+        // 一定間隔で作り直しを試す。
         if (currentTime - g_lastMouseReconnectTime >= kGamePadSearchIntervalMilliseconds &&
             g_directInput != nullptr)
         {
@@ -159,6 +168,11 @@ bool Mouse::Update()
     memcpy(&g_mousePrevState, &g_mouseState, sizeof(g_mouseState));
     ZeroMemory(&g_mouseState, sizeof(g_mouseState));
 
+    // DIMOUSESTATE2 には
+    // rgbButtons: ボタン
+    // lX/lY: 相対移動量
+    // lZ: ホイール量
+    // が入る。
     HRESULT ret = g_mouse->GetDeviceState(sizeof(g_mouseState), &g_mouseState);
     if (FAILED(ret))
     {
@@ -166,6 +180,7 @@ bool Mouse::Update()
 
         if (ret == DIERR_INPUTLOST)
         {
+            // Alt+Tab などで入力を失っただけなら Acquire で戻せる。
             ret = g_mouse->Acquire();
             if (SUCCEEDED(ret))
             {
@@ -189,21 +204,29 @@ bool Mouse::Update()
 
         if (!isRecovered)
         {
+            // 一時的なフォーカスロストではなく復旧不能なら、
+            // デバイスを破棄して後続フレームで再作成する。
             ReleaseMouseDevice();
             g_lastMouseReconnectTime = currentTime;
             return false;
         }
     }
 
+    // GetDelta はカーソル座標差ではなく、
+    // DirectInput が返す生の相対移動量をそのまま使う。
+    // これにより、カーソルを中央へ戻しても入力量は失われない。
     g_mouseDelta.x = g_mouseState.lX;
     g_mouseDelta.y = g_mouseState.lY;
 
     if (!g_mouseCursorVisible)
     {
+        // FPS視点のような操作をしやすくするため、
+        // 非表示中は毎フレーム中央へ戻す。
         CenterMouseCursorInWindow();
         UpdateMousePosition();
     }
 
+    // ボタンの履歴は Hold 判定用。
     std::vector<BYTE> temp(kMouseButtonCount);
     std::copy(&g_mouseState.rgbButtons[0],
               &g_mouseState.rgbButtons[kMouseButtonCount],
@@ -314,12 +337,16 @@ MousePosition Mouse::GetDelta(GamePadStick* stick)
 {
     if (stick != nullptr)
     {
+        // マウス移動を「右スティックのような値」としても使えるようにする。
+        // dx, dy から方向と強さを作り、UnifiedInput 側でゲームパッドと合成する。
         float dx = static_cast<float>(g_mouseDelta.x);
         float dy = -static_cast<float>(g_mouseDelta.y);
         float magnitude = std::sqrt(dx * dx + dy * dy);
 
         if (magnitude > 0.0f)
         {
+            // 5 ピクセル移動で power 1.0 相当。
+            // それ以上速く動かしたときは 1.0 を超えてもよい設計にしている。
             float power = magnitude / 5.0f;
 
             stick->x = (dx / magnitude) * power;
