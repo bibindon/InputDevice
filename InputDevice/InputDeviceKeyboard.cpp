@@ -1,4 +1,4 @@
-#include "InputDeviceInternal.h"
+﻿#include "InputDeviceInternal.h"
 #include <algorithm>
 #include <string>
 
@@ -218,7 +218,9 @@ void KeyBoard::Update()
     {
         bool isRecovered = false;
 
-        if (ret == DIERR_INPUTLOST)
+        if (ret == DIERR_INPUTLOST ||
+            ret == DIERR_NOTACQUIRED ||
+            ret == DIERR_OTHERAPPHASPRIO)
         {
             // Alt+Tab などで入力を失っただけなら Acquire で復帰できる。
             // すぐ復帰できる場合はデバイスを作り直さない。
@@ -238,11 +240,6 @@ void KeyBoard::Update()
                 return;
             }
         }
-        else if (ret == DIERR_NOTACQUIRED || ret == DIERR_OTHERAPPHASPRIO)
-        {
-            return;
-        }
-
         if (!isRecovered)
         {
             // ここまで来たら一時的なロストではなく、

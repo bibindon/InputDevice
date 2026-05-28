@@ -1,4 +1,4 @@
-#include "InputDeviceInternal.h"
+﻿#include "InputDeviceInternal.h"
 #include <algorithm>
 #include <cmath>
 
@@ -178,7 +178,9 @@ bool Mouse::Update()
     {
         bool isRecovered = false;
 
-        if (ret == DIERR_INPUTLOST)
+        if (ret == DIERR_INPUTLOST ||
+            ret == DIERR_NOTACQUIRED ||
+            ret == DIERR_OTHERAPPHASPRIO)
         {
             // Alt+Tab などで入力を失っただけなら Acquire で戻せる。
             ret = g_mouse->Acquire();
@@ -197,11 +199,6 @@ bool Mouse::Update()
                 return false;
             }
         }
-        else if (ret == DIERR_NOTACQUIRED || ret == DIERR_OTHERAPPHASPRIO)
-        {
-            return false;
-        }
-
         if (!isRecovered)
         {
             // 一時的なフォーカスロストではなく復旧不能なら、
