@@ -100,6 +100,70 @@ namespace
     }
 }
 
+std::wstring GetKeyName(int keyCode)
+{
+    switch (keyCode)
+    {
+    case DIK_A: return L"A";
+    case DIK_B: return L"B";
+    case DIK_C: return L"C";
+    case DIK_D: return L"D";
+    case DIK_E: return L"E";
+    case DIK_F: return L"F";
+    case DIK_G: return L"G";
+    case DIK_H: return L"H";
+    case DIK_I: return L"I";
+    case DIK_J: return L"J";
+    case DIK_K: return L"K";
+    case DIK_L: return L"L";
+    case DIK_M: return L"M";
+    case DIK_N: return L"N";
+    case DIK_O: return L"O";
+    case DIK_P: return L"P";
+    case DIK_Q: return L"Q";
+    case DIK_R: return L"R";
+    case DIK_S: return L"S";
+    case DIK_T: return L"T";
+    case DIK_U: return L"U";
+    case DIK_V: return L"V";
+    case DIK_W: return L"W";
+    case DIK_X: return L"X";
+    case DIK_Y: return L"Y";
+    case DIK_Z: return L"Z";
+    case DIK_0: return L"0";
+    case DIK_1: return L"1";
+    case DIK_2: return L"2";
+    case DIK_3: return L"3";
+    case DIK_4: return L"4";
+    case DIK_5: return L"5";
+    case DIK_6: return L"6";
+    case DIK_7: return L"7";
+    case DIK_8: return L"8";
+    case DIK_9: return L"9";
+    case DIK_SPACE: return L"Space";
+    case DIK_RETURN: return L"Enter";
+    case DIK_ESCAPE: return L"Escape";
+    case DIK_TAB: return L"Tab";
+    case DIK_BACK: return L"Backspace";
+    case DIK_LSHIFT: return L"LShift";
+    case DIK_RSHIFT: return L"RShift";
+    case DIK_LCONTROL: return L"LCtrl";
+    case DIK_RCONTROL: return L"RCtrl";
+    case DIK_LALT: return L"LAlt";
+    case DIK_RALT: return L"RAlt";
+    case DIK_UP: return L"Up";
+    case DIK_DOWN: return L"Down";
+    case DIK_LEFT: return L"Left";
+    case DIK_RIGHT: return L"Right";
+    default:
+    {
+        wchar_t buffer[32];
+        _snwprintf_s(buffer, 32, _TRUNCATE, L"DIK_%d", keyCode);
+        return buffer;
+    }
+    }
+}
+
 void KeyBoard::Initialize(LPDIRECTINPUT8 directInput, HWND hWnd)
 {
     ZeroMemory(m_key, sizeof(m_key));

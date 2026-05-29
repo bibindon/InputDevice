@@ -8,6 +8,7 @@
 #include <dinput.h>
 #include <deque>
 #include <map>
+#include <string>
 #include <vector>
 
 namespace InputDevice
@@ -16,6 +17,7 @@ namespace InputDevice
 void Initialize(HINSTANCE hInstance, HWND hWnd);
 void Update();
 void Finalize();
+std::wstring GetKeyName(int keyCode);
 
 // このライブラリは毎フレーム Update を呼び、
 // 「今の状態」と「1フレーム前の状態」を比べて

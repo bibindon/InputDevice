@@ -45,7 +45,6 @@ static void DrawInputStatus();
 static std::wstring SetGamePadButtonStatus(GamePadButton button, D3DCOLOR* color);
 static std::wstring GetMouseButtonStatus(MouseButton button, D3DCOLOR* color);
 static std::wstring GetUnifiedInputStatus(GamePadButton button, D3DCOLOR* color);
-static std::wstring KeyCodeToString(int keyCode);
 static std::wstring FormatText(const wchar_t* format, ...);
 static float GetFps();
 static void InitD3D(HWND hWnd);
@@ -222,7 +221,7 @@ void DrawInputStatus()
             keyboardText += L", ";
         }
 
-        keyboardText += KeyCodeToString(keyCode);
+        keyboardText += GetKeyName(keyCode);
         keyboardText += L"(";
 
         if (isDown)
@@ -572,46 +571,6 @@ std::wstring GetUnifiedInputStatus(GamePadButton button, D3DCOLOR* color)
     }
 
     return L"Up";
-}
-
-std::wstring KeyCodeToString(int keyCode)
-{
-    if (DIK_A <= keyCode && keyCode <= DIK_Z)
-    {
-        wchar_t ch = static_cast<wchar_t>(L'A' + (keyCode - DIK_A));
-        return std::wstring(1, ch);
-    }
-
-    if (DIK_0 <= keyCode && keyCode <= DIK_9)
-    {
-        wchar_t ch = static_cast<wchar_t>(L'0' + (keyCode - DIK_0));
-        return std::wstring(1, ch);
-    }
-
-    switch (keyCode)
-    {
-    case DIK_SPACE: return L"Space";
-    case DIK_RETURN: return L"Enter";
-    case DIK_ESCAPE: return L"Escape";
-    case DIK_TAB: return L"Tab";
-    case DIK_BACK: return L"Backspace";
-    case DIK_LSHIFT: return L"LShift";
-    case DIK_RSHIFT: return L"RShift";
-    case DIK_LCONTROL: return L"LCtrl";
-    case DIK_RCONTROL: return L"RCtrl";
-    case DIK_LALT: return L"LAlt";
-    case DIK_RALT: return L"RAlt";
-    case DIK_UP: return L"Up";
-    case DIK_DOWN: return L"Down";
-    case DIK_LEFT: return L"Left";
-    case DIK_RIGHT: return L"Right";
-    default:
-    {
-        wchar_t buffer[32];
-        _snwprintf_s(buffer, 32, _TRUNCATE, L"DIK_%d", keyCode);
-        return buffer;
-    }
-    }
 }
 
 float GetFps()
