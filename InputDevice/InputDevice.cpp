@@ -1,4 +1,4 @@
-#include "InputDeviceInternal.h"
+﻿#include "InputDeviceInternal.h"
 
 namespace InputDevice
 {
