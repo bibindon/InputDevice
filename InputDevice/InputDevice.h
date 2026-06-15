@@ -43,6 +43,9 @@ public:
     // 0.5秒以上長押ししていた
     virtual bool IsHold(int keyCode) = 0;
 
+    // 指定秒数以上長押ししていた
+    virtual bool IsHoldDuration(int keyCode, float seconds) = 0;
+
     // 押されていたが、その直後の1フレームだけ離された
     virtual bool IsUpFirstFrame(int keyCode) = 0;
 
@@ -64,6 +67,9 @@ public:
     // 0.5秒以上長押ししていた
     bool IsHold(int keyCode);
 
+    // 指定秒数以上長押ししていた
+    bool IsHoldDuration(int keyCode, float seconds);
+
     bool IsUpFirstFrame(int keyCode);
 
 private:
@@ -83,6 +89,7 @@ public:
     bool IsDown(int keyCode);
     bool IsDownFirstFrame(int keyCode);
     bool IsHold(int keyCode);
+    bool IsHoldDuration(int keyCode, float seconds);
     bool IsUpFirstFrame(int keyCode);
 
     void SetKeyDown(int keyCode, bool isDown);
@@ -111,6 +118,7 @@ public:
 
     // 0.5秒以上長押ししていた
     static bool IsHold(int keyCode);
+    static bool IsHoldDuration(int keyCode, float seconds);
     static bool IsUpFirstFrame(int keyCode);
 private:
     static IKeyBoard* m_keyboard;
@@ -144,6 +152,7 @@ public:
     static bool IsDown(MouseButton key);
     static bool IsDownFirstFrame(MouseButton key);
     static bool IsHold(MouseButton key);
+    static bool IsHoldDuration(MouseButton key, float seconds);
     static bool IsUpFirstFrame(MouseButton key);
     static bool IsInWindow();
     static bool IsVisible();
@@ -204,6 +213,7 @@ public:
     virtual bool IsDown(GamePadButton button) = 0;
     virtual bool IsDownFirstFrame(GamePadButton button) = 0;
     virtual bool IsHold(GamePadButton button) = 0;
+    virtual bool IsHoldDuration(GamePadButton button, float seconds) = 0;
     virtual bool IsUpFirstFrame(GamePadButton button) = 0;
     virtual GamePadStick GetStickL() = 0;
     virtual GamePadStick GetStickR() = 0;
@@ -219,6 +229,7 @@ public:
     bool IsDown(GamePadButton button) override;
     bool IsDownFirstFrame(GamePadButton button) override;
     bool IsHold(GamePadButton button) override;
+    bool IsHoldDuration(GamePadButton button, float seconds) override;
     bool IsUpFirstFrame(GamePadButton button) override;
     GamePadStick GetStickL() override;
     GamePadStick GetStickR() override;
@@ -238,6 +249,7 @@ public:
     bool IsDown(GamePadButton button) override;
     bool IsDownFirstFrame(GamePadButton button) override;
     bool IsHold(GamePadButton button) override;
+    bool IsHoldDuration(GamePadButton button, float seconds) override;
     bool IsUpFirstFrame(GamePadButton button) override;
     GamePadStick GetStickL() override;
     GamePadStick GetStickR() override;
@@ -262,6 +274,7 @@ public:
     static bool IsDown(GamePadButton button);
     static bool IsDownFirstFrame(GamePadButton button);
     static bool IsHold(GamePadButton button);
+    static bool IsHoldDuration(GamePadButton button, float seconds);
     static bool IsUpFirstFrame(GamePadButton button);
     static GamePadStick GetStickL();
     static GamePadStick GetStickR();
@@ -285,6 +298,7 @@ public:
     static bool IsDown(GamePadButton button);
     static bool IsDownFirstFrame(GamePadButton button);
     static bool IsHold(GamePadButton button);
+    static bool IsHoldDuration(GamePadButton button, float seconds);
     static bool IsUpFirstFrame(GamePadButton button);
     static void SetKeyCode(GamePadButton button, int keyCode);
 

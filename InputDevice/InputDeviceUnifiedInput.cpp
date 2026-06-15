@@ -47,6 +47,34 @@ namespace
         return false;
     }
 
+    bool IsUnifiedInputKeyHoldDuration(GamePadButton button, float seconds)
+    {
+        auto range = g_unifiedInputKeyMap.equal_range(static_cast<int>(button));
+        for (auto it = range.first; it != range.second; ++it)
+        {
+            if (SKeyBoard::IsHoldDuration(it->second, seconds))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool IsUnifiedInputMouseButtonHoldDuration(GamePadButton button, float seconds)
+    {
+        auto range = g_unifiedInputMouseButtonMap.equal_range(static_cast<int>(button));
+        for (auto it = range.first; it != range.second; ++it)
+        {
+            if (Mouse::IsHoldDuration(static_cast<MouseButton>(it->second), seconds))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     bool IsUnifiedInputWheelUpTriggered(GamePadButton button)
     {
         if (button != GAMEPAD_POV_UP)
@@ -163,6 +191,26 @@ bool UnifiedInput::IsHold(GamePadButton button)
     }
 
     if (IsUnifiedInputMouseButtonTriggered(button, Mouse::IsHold))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+bool UnifiedInput::IsHoldDuration(GamePadButton button, float seconds)
+{
+    if (GamePad::IsHoldDuration(button, seconds))
+    {
+        return true;
+    }
+
+    if (IsUnifiedInputKeyHoldDuration(button, seconds))
+    {
+        return true;
+    }
+
+    if (IsUnifiedInputMouseButtonHoldDuration(button, seconds))
     {
         return true;
     }

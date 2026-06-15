@@ -38,6 +38,7 @@ extern const std::size_t kMouseButtonCount;
 extern const std::size_t kGamePadButtonCount;
 extern const std::size_t kGamePadXButtonStateCount;
 extern const std::size_t kHoldFrameCount;
+extern const float kHoldFramePerSecond;
 extern const std::size_t kInputHistoryFrameCount;
 extern const LONG kGamePadAxisMin;
 extern const LONG kGamePadAxisMax;
@@ -62,6 +63,7 @@ bool IsValidGamePadButtonIndex(GamePadButton button);
 bool IsValidGamePadXButtonStateIndex(GamePadButton button);
 bool IsGamePadPOVButton(GamePadButton button);
 void ResetUnifiedInputKeyMap();
+std::size_t GetHoldFrameCountForDuration(float seconds);
 
 // スティック値を -1.0 ～ 1.0 の共通表現へ寄せるための補助関数群。
 float ClampFloat(float value, float minValue, float maxValue);
@@ -86,9 +88,11 @@ bool IsGamePadCurrentPOVPressed(DWORD minValue, DWORD maxValue);
 bool IsGamePadPrevPOVPressed(DWORD minValue, DWORD maxValue);
 bool IsGamePadPOVFirstFrame(DWORD minValue, DWORD maxValue);
 bool IsGamePadPOVHold(DWORD minValue, DWORD maxValue);
+bool IsGamePadPOVHoldDuration(DWORD minValue, DWORD maxValue, float seconds);
 bool IsGamePadCurrentPOVButtonPressed(GamePadButton button);
 bool IsGamePadPOVButtonFirstFrame(GamePadButton button);
 bool IsGamePadPOVButtonHold(GamePadButton button);
+bool IsGamePadPOVButtonHoldDuration(GamePadButton button, float seconds);
 
 BOOL CALLBACK EnumGamePadCallback(const DIDEVICEINSTANCE* instance, VOID* context);
 

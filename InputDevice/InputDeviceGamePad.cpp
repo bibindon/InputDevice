@@ -186,9 +186,14 @@ bool GamePad_D::IsDownFirstFrame(GamePadButton button)
 
 bool GamePad_D::IsHold(GamePadButton button)
 {
+    return IsHoldDuration(button, 0.5f);
+}
+
+bool GamePad_D::IsHoldDuration(GamePadButton button, float seconds)
+{
     if (IsGamePadPOVButton(button))
     {
-        return IsGamePadPOVButtonHold(button);
+        return IsGamePadPOVButtonHoldDuration(button, seconds);
     }
 
     if (!IsValidGamePadButtonIndex(button))
@@ -196,12 +201,13 @@ bool GamePad_D::IsHold(GamePadButton button)
         return false;
     }
 
-    if (g_gamePadButtonDeque.size() <= kHoldFrameCount)
+    std::size_t holdFrameCount = GetHoldFrameCountForDuration(seconds);
+    if (g_gamePadButtonDeque.size() <= holdFrameCount)
     {
         return false;
     }
 
-    for (std::size_t i = 0; i < kHoldFrameCount; ++i)
+    for (std::size_t i = 0; i < holdFrameCount; ++i)
     {
         if ((g_gamePadButtonDeque.at(i).at((std::size_t)button) & 0x80) == 0)
         {
@@ -376,6 +382,11 @@ bool GamePad_X::IsDownFirstFrame(GamePadButton button)
 
 bool GamePad_X::IsHold(GamePadButton button)
 {
+    return IsHoldDuration(button, 0.5f);
+}
+
+bool GamePad_X::IsHoldDuration(GamePadButton button, float seconds)
+{
     if (!g_gamePadXConnected)
     {
         return false;
@@ -386,13 +397,14 @@ bool GamePad_X::IsHold(GamePadButton button)
         return false;
     }
 
-    if (g_gamePadXButtonDeque.size() <= kHoldFrameCount)
+    std::size_t holdFrameCount = GetHoldFrameCountForDuration(seconds);
+    if (g_gamePadXButtonDeque.size() <= holdFrameCount)
     {
         return false;
     }
 
     std::size_t index = static_cast<std::size_t>(button);
-    for (std::size_t i = 0; i < kHoldFrameCount; ++i)
+    for (std::size_t i = 0; i < holdFrameCount; ++i)
     {
         if ((g_gamePadXButtonDeque.at(i).at(index) & 0x80) == 0)
         {
@@ -533,6 +545,17 @@ bool GamePad::IsHold(GamePadButton button)
     }
 
     return gamePad->IsHold(button);
+}
+
+bool GamePad::IsHoldDuration(GamePadButton button, float seconds)
+{
+    IGamePad* gamePad = GetActiveGamePad();
+    if (gamePad == nullptr)
+    {
+        return false;
+    }
+
+    return gamePad->IsHoldDuration(button, seconds);
 }
 
 bool GamePad::IsUpFirstFrame(GamePadButton button)

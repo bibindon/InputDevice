@@ -264,17 +264,23 @@ bool Mouse::IsDownFirstFrame(MouseButton key)
 
 bool Mouse::IsHold(MouseButton key)
 {
+    return IsHoldDuration(key, 0.5f);
+}
+
+bool Mouse::IsHoldDuration(MouseButton key, float seconds)
+{
     if (!IsValidMouseButtonIndex(key))
     {
         return false;
     }
 
-    if (g_mouseButtonDeque.size() <= kHoldFrameCount)
+    std::size_t holdFrameCount = GetHoldFrameCountForDuration(seconds);
+    if (g_mouseButtonDeque.size() <= holdFrameCount)
     {
         return false;
     }
 
-    for (std::size_t i = 0; i < kHoldFrameCount; ++i)
+    for (std::size_t i = 0; i < holdFrameCount; ++i)
     {
         if ((g_mouseButtonDeque.at(i).at((std::size_t)key) & 0x80) == 0)
         {

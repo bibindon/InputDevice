@@ -244,6 +244,16 @@ bool SKeyBoard::IsHold(int keyCode)
     return m_keyboard->IsHold(keyCode);
 }
 
+bool SKeyBoard::IsHoldDuration(int keyCode, float seconds)
+{
+    if (m_keyboard == nullptr)
+    {
+        return false;
+    }
+
+    return m_keyboard->IsHoldDuration(keyCode, seconds);
+}
+
 bool SKeyBoard::IsUpFirstFrame(int keyCode)
 {
     if (m_keyboard == nullptr)
@@ -364,15 +374,19 @@ bool KeyBoard::IsDownFirstFrame(int keyCode)
 
 bool KeyBoard::IsHold(int keyCode)
 {
-    // 今回は「30フレーム連続で押されている」を Hold としている。
-    // 実時間ではなくフレーム基準なので、FPS が変わると体感時間も変わる。
-    if (m_keyDeque.size() <= 30)
+    return IsHoldDuration(keyCode, 0.5f);
+}
+
+bool KeyBoard::IsHoldDuration(int keyCode, float seconds)
+{
+    std::size_t holdFrameCount = GetHoldFrameCountForDuration(seconds);
+    if (m_keyDeque.size() <= holdFrameCount)
     {
         return false;
     }
 
     bool isHold = true;
-    for (std::size_t i = 0; i < 30; ++i)
+    for (std::size_t i = 0; i < holdFrameCount; ++i)
     {
         if (m_keyDeque.at(i).at((std::size_t)keyCode) & 0x80)
         {
@@ -462,13 +476,19 @@ bool MockKeyBoard::IsDownFirstFrame(int keyCode)
 
 bool MockKeyBoard::IsHold(int keyCode)
 {
-    if (m_keyDeque.size() <= 30)
+    return IsHoldDuration(keyCode, 0.5f);
+}
+
+bool MockKeyBoard::IsHoldDuration(int keyCode, float seconds)
+{
+    std::size_t holdFrameCount = GetHoldFrameCountForDuration(seconds);
+    if (m_keyDeque.size() <= holdFrameCount)
     {
         return false;
     }
 
     bool isHold = true;
-    for (std::size_t i = 0; i < 30; ++i)
+    for (std::size_t i = 0; i < holdFrameCount; ++i)
     {
         if (m_keyDeque.at(i).at((std::size_t)keyCode) & 0x80)
         {

@@ -43,6 +43,7 @@ const std::size_t kMouseButtonCount = 8;
 const std::size_t kGamePadButtonCount = 128;
 const std::size_t kGamePadXButtonStateCount = 132;
 const std::size_t kHoldFrameCount = 30;
+const float kHoldFramePerSecond = 60.0f;
 const std::size_t kInputHistoryFrameCount = 60 * 5;
 const LONG kGamePadAxisMin = -1000;
 const LONG kGamePadAxisMax = 1000;
@@ -249,6 +250,22 @@ void ResetUnifiedInputKeyMap()
     g_unifiedInputMouseButtonMap.emplace(GAMEPAD_A, MOUSE_SIDE1);
     g_unifiedInputMouseButtonMap.emplace(GAMEPAD_R1, MOUSE_LEFT);
     g_unifiedInputMouseButtonMap.emplace(GAMEPAD_R2, MOUSE_RIGHT);
+}
+
+std::size_t GetHoldFrameCountForDuration(float seconds)
+{
+    if (seconds <= 0.0f)
+    {
+        return 1;
+    }
+
+    float frameCount = std::ceil(seconds * kHoldFramePerSecond);
+    if (frameCount < 1.0f)
+    {
+        return 1;
+    }
+
+    return static_cast<std::size_t>(frameCount);
 }
 
 float ClampFloat(float value, float minValue, float maxValue)
@@ -546,12 +563,18 @@ bool IsGamePadPOVFirstFrame(DWORD minValue, DWORD maxValue)
 
 bool IsGamePadPOVHold(DWORD minValue, DWORD maxValue)
 {
-    if (g_gamePadPOVDeque.size() <= kHoldFrameCount)
+    return IsGamePadPOVHoldDuration(minValue, maxValue, 0.5f);
+}
+
+bool IsGamePadPOVHoldDuration(DWORD minValue, DWORD maxValue, float seconds)
+{
+    std::size_t holdFrameCount = GetHoldFrameCountForDuration(seconds);
+    if (g_gamePadPOVDeque.size() <= holdFrameCount)
     {
         return false;
     }
 
-    for (std::size_t i = 0; i < kHoldFrameCount; ++i)
+    for (std::size_t i = 0; i < holdFrameCount; ++i)
     {
         if (!IsGamePadPOVPressed(g_gamePadPOVDeque.at(i), minValue, maxValue))
         {
@@ -614,24 +637,29 @@ bool IsGamePadPOVButtonFirstFrame(GamePadButton button)
 
 bool IsGamePadPOVButtonHold(GamePadButton button)
 {
+    return IsGamePadPOVButtonHoldDuration(button, 0.5f);
+}
+
+bool IsGamePadPOVButtonHoldDuration(GamePadButton button, float seconds)
+{
     if (button == GAMEPAD_POV_UP)
     {
-        return IsGamePadPOVHold(31500, 4500);
+        return IsGamePadPOVHoldDuration(31500, 4500, seconds);
     }
 
     if (button == GAMEPAD_POV_RIGHT)
     {
-        return IsGamePadPOVHold(4500, 13500);
+        return IsGamePadPOVHoldDuration(4500, 13500, seconds);
     }
 
     if (button == GAMEPAD_POV_DOWN)
     {
-        return IsGamePadPOVHold(13500, 22500);
+        return IsGamePadPOVHoldDuration(13500, 22500, seconds);
     }
 
     if (button == GAMEPAD_POV_LEFT)
     {
-        return IsGamePadPOVHold(22500, 31500);
+        return IsGamePadPOVHoldDuration(22500, 31500, seconds);
     }
 
     return false;
