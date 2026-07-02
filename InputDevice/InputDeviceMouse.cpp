@@ -15,6 +15,8 @@ namespace
     {
         ZeroMemory(&g_mouseState, sizeof(g_mouseState));
         ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
+        g_mouseWheelDelta = 0;
+        g_remoteDesktopPreviousRawWheelDelta = 0;
         g_mousePosition = { };
         g_mousePrevPosition = { };
         g_mouseDelta = { };
@@ -91,6 +93,8 @@ bool Mouse::Initialize()
 
     ZeroMemory(&g_mouseState, sizeof(g_mouseState));
     ZeroMemory(&g_mousePrevState, sizeof(g_mousePrevState));
+    g_mouseWheelDelta = 0;
+    g_remoteDesktopPreviousRawWheelDelta = 0;
     g_mousePosition = { };
     g_mousePrevPosition = { };
     g_mouseDelta = { };
@@ -167,6 +171,7 @@ bool Mouse::Update()
 
     memcpy(&g_mousePrevState, &g_mouseState, sizeof(g_mouseState));
     ZeroMemory(&g_mouseState, sizeof(g_mouseState));
+    g_mouseWheelDelta = 0;
 
     // DIMOUSESTATE2 には
     // rgbButtons: ボタン
@@ -214,6 +219,29 @@ bool Mouse::Update()
     // これにより、カーソルを中央へ戻しても入力量は失われない。
     g_mouseDelta.x = g_mouseState.lX;
     g_mouseDelta.y = g_mouseState.lY;
+
+    g_mouseWheelDelta = g_mouseState.lZ;
+    if (g_remoteDesktopMode)
+    {
+        if (g_mouseState.lZ == 0)
+        {
+            g_mouseWheelDelta = 0;
+            g_remoteDesktopPreviousRawWheelDelta = 0;
+        }
+        else if (g_mouseState.lZ == g_remoteDesktopPreviousRawWheelDelta)
+        {
+            g_mouseWheelDelta = 0;
+        }
+        else
+        {
+            g_mouseWheelDelta = g_mouseState.lZ;
+            g_remoteDesktopPreviousRawWheelDelta = g_mouseState.lZ;
+        }
+    }
+    else
+    {
+        g_remoteDesktopPreviousRawWheelDelta = 0;
+    }
 
     if (!g_mouseCursorVisible)
     {
@@ -333,7 +361,7 @@ MousePosition Mouse::GetPosition()
 
 long Mouse::GetWheelDelta()
 {
-    return g_mouseState.lZ;
+    return g_mouseWheelDelta;
 }
 
 MousePosition Mouse::GetDelta(GamePadStick* stick)

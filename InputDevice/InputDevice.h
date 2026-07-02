@@ -18,6 +18,8 @@ void Initialize(HINSTANCE hInstance, HWND hWnd);
 void Update();
 void Finalize();
 std::wstring GetKeyName(int keyCode);
+void SetRemoteDesktopMode(bool enabled);
+bool IsRemoteDesktopMode();
 
 // このライブラリは毎フレーム Update を呼び、
 // 「今の状態」と「1フレーム前の状態」を比べて

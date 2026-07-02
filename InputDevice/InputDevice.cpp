@@ -46,6 +46,18 @@ void Update()
     g_gamePadX.Update();
 }
 
+void SetRemoteDesktopMode(bool enabled)
+{
+    g_remoteDesktopMode = enabled;
+    g_mouseWheelDelta = 0;
+    g_remoteDesktopPreviousRawWheelDelta = 0;
+}
+
+bool IsRemoteDesktopMode()
+{
+    return g_remoteDesktopMode;
+}
+
 void Finalize()
 {
     // 逆順で破棄していくと依存関係を追いやすい。
