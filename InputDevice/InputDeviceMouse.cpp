@@ -1,6 +1,7 @@
 ﻿#include "InputDeviceInternal.h"
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
 namespace InputDevice
 {
@@ -9,6 +10,9 @@ using namespace Internal;
 
 namespace
 {
+    BYTE g_injectedMouseButtons[5] = { };
+    BYTE g_injectedMouseButtonsPrev[5] = { };
+
     // マウスはボタン状態に加えて座標や相対移動量も持っている。
     // 再接続時に古い値が残ると表示も判定も壊れるため、まとめてクリアする。
     void ResetMouseState()
@@ -148,6 +152,10 @@ bool Mouse::Finalize()
 
 bool Mouse::Update()
 {
+    memcpy(g_injectedMouseButtonsPrev,
+           g_injectedMouseButtons,
+           sizeof(g_injectedMouseButtons));
+
     ULONGLONG currentTime = GetTickCount64();
 
     if (g_mouse == nullptr)
@@ -274,7 +282,12 @@ bool Mouse::IsDown(MouseButton key)
         return false;
     }
 
-    return (g_mouseState.rgbButtons[(std::size_t)key] & 0x80) != 0;
+    const std::size_t index = static_cast<std::size_t>(key);
+    if (g_injectedMouseButtons[index] & 0x80)
+    {
+        return true;
+    }
+    return (g_mouseState.rgbButtons[index] & 0x80) != 0;
 }
 
 bool Mouse::IsDownFirstFrame(MouseButton key)
@@ -285,9 +298,39 @@ bool Mouse::IsDownFirstFrame(MouseButton key)
     }
 
     const std::size_t index = (std::size_t)key;
+    const bool isInjectedDown = (g_injectedMouseButtons[index] & 0x80) != 0;
+    const bool wasInjectedDown = (g_injectedMouseButtonsPrev[index] & 0x80) != 0;
+    if (isInjectedDown && !wasInjectedDown)
+    {
+        return true;
+    }
     const bool isDown = (g_mouseState.rgbButtons[index] & 0x80) != 0;
     const bool wasDown = (g_mousePrevState.rgbButtons[index] & 0x80) != 0;
     return isDown && !wasDown;
+}
+
+void Mouse::SetInjectedButtonDown(MouseButton key, bool isDown)
+{
+    if (!IsValidMouseButtonIndex(key))
+    {
+        throw std::out_of_range("Injected mouse button is out of range.");
+    }
+
+    const std::size_t index = static_cast<std::size_t>(key);
+    if (isDown)
+    {
+        g_injectedMouseButtons[index] = 0x80;
+    }
+    else
+    {
+        g_injectedMouseButtons[index] = 0;
+    }
+}
+
+void Mouse::ClearInjectedButtons()
+{
+    ZeroMemory(g_injectedMouseButtons, sizeof(g_injectedMouseButtons));
+    ZeroMemory(g_injectedMouseButtonsPrev, sizeof(g_injectedMouseButtonsPrev));
 }
 
 bool Mouse::IsHold(MouseButton key)

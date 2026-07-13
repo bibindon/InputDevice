@@ -166,6 +166,8 @@ public:
 
     // 前フレームからの移動量
     static MousePosition GetDelta(GamePadStick* stick = nullptr);
+    static void SetInjectedButtonDown(MouseButton key, bool isDown);
+    static void ClearInjectedButtons();
 
 private:
 };
