@@ -122,6 +122,8 @@ public:
     static bool IsHold(int keyCode);
     static bool IsHoldDuration(int keyCode, float seconds);
     static bool IsUpFirstFrame(int keyCode);
+    static void SetInjectedKeyDown(int keyCode, bool isDown);
+    static void ClearInjectedKeys();
 private:
     static IKeyBoard* m_keyboard;
 };

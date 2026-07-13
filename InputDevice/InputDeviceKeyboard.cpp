@@ -1,5 +1,6 @@
 ﻿#include "InputDeviceInternal.h"
 #include <algorithm>
+#include <stdexcept>
 #include <string>
 
 namespace InputDevice
@@ -9,6 +10,10 @@ using namespace Internal;
 
 namespace
 {
+    BYTE g_injectedKey[256] = { };
+    BYTE g_injectedKeyPrev[256] = { };
+    std::deque<std::vector<BYTE>> g_injectedKeyDeque;
+
     // キーボード切断や再接続のタイミングでは、
     // 直前の状態が残っていると First/Hold 判定が壊れる。
     // そのため入力バッファと履歴をまとめて初期化する。
@@ -206,6 +211,16 @@ IKeyBoard* SKeyBoard::Get()
 
 void SKeyBoard::Update()
 {
+    memcpy(g_injectedKeyPrev, g_injectedKey, sizeof(g_injectedKey));
+
+    std::vector<BYTE> injectedState(256);
+    std::copy(&g_injectedKey[0], &g_injectedKey[256], injectedState.begin());
+    g_injectedKeyDeque.push_front(injectedState);
+    if (g_injectedKeyDeque.size() >= 60 * 5)
+    {
+        g_injectedKeyDeque.erase(g_injectedKeyDeque.begin() + 60 * 5, g_injectedKeyDeque.end());
+    }
+
     if (m_keyboard == nullptr)
     {
         return;
@@ -216,6 +231,10 @@ void SKeyBoard::Update()
 
 bool SKeyBoard::IsDown(int keyCode)
 {
+    if (g_injectedKey[keyCode] & 0x80)
+    {
+        return true;
+    }
     if (m_keyboard == nullptr)
     {
         return false;
@@ -226,6 +245,11 @@ bool SKeyBoard::IsDown(int keyCode)
 
 bool SKeyBoard::IsDownFirstFrame(int keyCode)
 {
+    if ((g_injectedKey[keyCode] & 0x80) &&
+        (g_injectedKeyPrev[keyCode] & 0x80) == 0)
+    {
+        return true;
+    }
     if (m_keyboard == nullptr)
     {
         return false;
@@ -236,16 +260,29 @@ bool SKeyBoard::IsDownFirstFrame(int keyCode)
 
 bool SKeyBoard::IsHold(int keyCode)
 {
-    if (m_keyboard == nullptr)
-    {
-        return false;
-    }
-
-    return m_keyboard->IsHold(keyCode);
+    return IsHoldDuration(keyCode, 0.5f);
 }
 
 bool SKeyBoard::IsHoldDuration(int keyCode, float seconds)
 {
+    const std::size_t holdFrameCount = GetHoldFrameCountForDuration(seconds);
+    if (g_injectedKeyDeque.size() > holdFrameCount)
+    {
+        bool isInjectedHold = true;
+        for (std::size_t i = 0; i < holdFrameCount; ++i)
+        {
+            if ((g_injectedKeyDeque.at(i).at(static_cast<std::size_t>(keyCode)) & 0x80) == 0)
+            {
+                isInjectedHold = false;
+                break;
+            }
+        }
+        if (isInjectedHold)
+        {
+            return true;
+        }
+    }
+
     if (m_keyboard == nullptr)
     {
         return false;
@@ -256,12 +293,41 @@ bool SKeyBoard::IsHoldDuration(int keyCode, float seconds)
 
 bool SKeyBoard::IsUpFirstFrame(int keyCode)
 {
+    if ((g_injectedKey[keyCode] & 0x80) == 0 &&
+        (g_injectedKeyPrev[keyCode] & 0x80))
+    {
+        return true;
+    }
     if (m_keyboard == nullptr)
     {
         return false;
     }
 
     return m_keyboard->IsUpFirstFrame(keyCode);
+}
+
+void SKeyBoard::SetInjectedKeyDown(int keyCode, bool isDown)
+{
+    if (keyCode < 0 || keyCode >= 256)
+    {
+        throw std::out_of_range("Injected keyboard key code is out of range.");
+    }
+
+    if (isDown)
+    {
+        g_injectedKey[keyCode] = 0x80;
+    }
+    else
+    {
+        g_injectedKey[keyCode] = 0;
+    }
+}
+
+void SKeyBoard::ClearInjectedKeys()
+{
+    ZeroMemory(g_injectedKey, sizeof(g_injectedKey));
+    ZeroMemory(g_injectedKeyPrev, sizeof(g_injectedKeyPrev));
+    g_injectedKeyDeque.clear();
 }
 
 void KeyBoard::Update()
