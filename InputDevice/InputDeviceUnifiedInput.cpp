@@ -125,6 +125,11 @@ bool UnifiedInput::IsDown(GamePadButton button)
         return true;
     }
 
+    if (IsGamePadTestKeyboardMode())
+    {
+        return false;
+    }
+
     if (IsUnifiedInputKeyTriggered(button, SKeyBoard::IsDown))
     {
         return true;
@@ -153,6 +158,11 @@ bool UnifiedInput::IsDownFirstFrame(GamePadButton button)
     if (GamePad::IsDownFirstFrame(button))
     {
         return true;
+    }
+
+    if (IsGamePadTestKeyboardMode())
+    {
+        return false;
     }
 
     if (IsUnifiedInputKeyTriggered(button, SKeyBoard::IsDownFirstFrame))
@@ -185,6 +195,11 @@ bool UnifiedInput::IsHold(GamePadButton button)
         return true;
     }
 
+    if (IsGamePadTestKeyboardMode())
+    {
+        return false;
+    }
+
     if (IsUnifiedInputKeyTriggered(button, SKeyBoard::IsHold))
     {
         return true;
@@ -205,6 +220,11 @@ bool UnifiedInput::IsHoldDuration(GamePadButton button, float seconds)
         return true;
     }
 
+    if (IsGamePadTestKeyboardMode())
+    {
+        return false;
+    }
+
     if (IsUnifiedInputKeyHoldDuration(button, seconds))
     {
         return true;
@@ -223,6 +243,11 @@ bool UnifiedInput::IsUpFirstFrame(GamePadButton button)
     if (GamePad::IsUpFirstFrame(button))
     {
         return true;
+    }
+
+    if (IsGamePadTestKeyboardMode())
+    {
+        return false;
     }
 
     if (IsUnifiedInputKeyTriggered(button, SKeyBoard::IsUpFirstFrame))
@@ -256,6 +281,11 @@ GamePadStick UnifiedInput::GetStickL()
     float x = gamePadStick.x;
     float y = gamePadStick.y;
 
+    if (IsGamePadTestKeyboardMode())
+    {
+        return gamePadStick;
+    }
+
     // WASD を「左スティック最大入力」として合成する。
     // 例えば W と D を同時に押せば右上方向になる。
     if (SKeyBoard::IsDown(DIK_A))
@@ -285,6 +315,11 @@ GamePadStick UnifiedInput::GetStickR()
 {
     GamePadStick gamePadStick = GamePad::GetStickR();
     GamePadStick mouseStick = { };
+
+    if (IsGamePadTestKeyboardMode())
+    {
+        return gamePadStick;
+    }
 
     // マウス移動を右スティック相当として取り込み、
     // パッドの右スティックと同じ土俵で扱えるようにする。

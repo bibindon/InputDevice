@@ -1,5 +1,6 @@
 ﻿#include "InputDeviceInternal.h"
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 
 namespace InputDevice
@@ -36,6 +37,8 @@ void Internal::UpdateInjectedGamePadState()
 {
     g_injectedGamePadButtonsPrev = g_injectedGamePadButtons;
     g_injectedGamePadButtons = g_injectedGamePadButtonsRequested;
+    g_injectedGamePadStickL = g_injectedGamePadStickLRequested;
+    g_injectedGamePadStickR = g_injectedGamePadStickRRequested;
     g_injectedGamePadButtonDeque.push_front(g_injectedGamePadButtons);
 
     if (g_injectedGamePadButtonDeque.size() >= kInputHistoryFrameCount)
@@ -506,6 +509,7 @@ IGamePad* GetGamePadX()
 bool GamePad::Initialize()
 {
     ClearInjectedButtons();
+    ClearInjectedSticks();
     bool isDirectInputInitialized = g_gamePadD.Initialize();
     bool isXInputInitialized = g_gamePadX.Initialize();
 
@@ -525,6 +529,7 @@ bool GamePad::Initialize()
 bool GamePad::Finalize()
 {
     ClearInjectedButtons();
+    ClearInjectedSticks();
     bool isXInputFinalized = g_gamePadX.Finalize();
     bool isDirectInputFinalized = g_gamePadD.Finalize();
 
@@ -540,6 +545,7 @@ bool GamePad::Update()
 {
     bool isDirectInputUpdated = g_gamePadD.Update();
     bool isXInputUpdated = g_gamePadX.Update();
+    UpdateGamePadTestKeyboardInput();
     UpdateInjectedGamePadState();
 
     // 戻り値も XInput 優先にしておくと、
@@ -592,13 +598,7 @@ bool GamePad::IsDownFirstFrame(GamePadButton button)
 
 bool GamePad::IsHold(GamePadButton button)
 {
-    IGamePad* gamePad = GetActiveGamePad();
-    if (gamePad == nullptr)
-    {
-        return false;
-    }
-
-    return gamePad->IsHold(button);
+    return IsHoldDuration(button, 0.5f);
 }
 
 bool GamePad::IsHoldDuration(GamePadButton button, float seconds)
@@ -654,26 +654,30 @@ bool GamePad::IsUpFirstFrame(GamePadButton button)
 
 GamePadStick GamePad::GetStickL()
 {
+    GamePadStick physicalStick = { };
     IGamePad* gamePad = GetActiveGamePad();
-    if (gamePad == nullptr)
+    if (gamePad != nullptr)
     {
-        GamePadStick stick = { };
-        return stick;
+        physicalStick = gamePad->GetStickL();
     }
 
-    return gamePad->GetStickL();
+    return CreateStickFromFloatAxis(
+        physicalStick.x + g_injectedGamePadStickL.x,
+        physicalStick.y + g_injectedGamePadStickL.y);
 }
 
 GamePadStick GamePad::GetStickR()
 {
+    GamePadStick physicalStick = { };
     IGamePad* gamePad = GetActiveGamePad();
-    if (gamePad == nullptr)
+    if (gamePad != nullptr)
     {
-        GamePadStick stick = { };
-        return stick;
+        physicalStick = gamePad->GetStickR();
     }
 
-    return gamePad->GetStickR();
+    return CreateStickFromFloatAxis(
+        physicalStick.x + g_injectedGamePadStickR.x,
+        physicalStick.y + g_injectedGamePadStickR.y);
 }
 
 void GamePad::SetInjectedButtonDown(GamePadButton button, bool isDown)
@@ -703,6 +707,36 @@ void GamePad::ClearInjectedButtons()
     std::fill(g_injectedGamePadButtonsPrev.begin(),
               g_injectedGamePadButtonsPrev.end(), 0);
     g_injectedGamePadButtonDeque.clear();
+}
+
+void GamePad::SetInjectedStickL(float x, float y)
+{
+    if (!std::isfinite(x) || !std::isfinite(y) ||
+        x < -1.0f || 1.0f < x || y < -1.0f || 1.0f < y)
+    {
+        throw std::out_of_range("Injected left game pad stick is out of range.");
+    }
+
+    g_injectedGamePadStickLRequested = CreateStickFromFloatAxis(x, y);
+}
+
+void GamePad::SetInjectedStickR(float x, float y)
+{
+    if (!std::isfinite(x) || !std::isfinite(y) ||
+        x < -1.0f || 1.0f < x || y < -1.0f || 1.0f < y)
+    {
+        throw std::out_of_range("Injected right game pad stick is out of range.");
+    }
+
+    g_injectedGamePadStickRRequested = CreateStickFromFloatAxis(x, y);
+}
+
+void GamePad::ClearInjectedSticks()
+{
+    g_injectedGamePadStickLRequested = { };
+    g_injectedGamePadStickRRequested = { };
+    g_injectedGamePadStickL = { };
+    g_injectedGamePadStickR = { };
 }
 
 }

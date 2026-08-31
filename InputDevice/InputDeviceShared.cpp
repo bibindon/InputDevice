@@ -57,6 +57,10 @@ std::vector<BYTE> g_injectedGamePadButtonsRequested(kGamePadXButtonStateCount);
 std::vector<BYTE> g_injectedGamePadButtons(kGamePadXButtonStateCount);
 std::vector<BYTE> g_injectedGamePadButtonsPrev(kGamePadXButtonStateCount);
 std::deque<std::vector<BYTE>> g_injectedGamePadButtonDeque;
+GamePadStick g_injectedGamePadStickLRequested = { };
+GamePadStick g_injectedGamePadStickRRequested = { };
+GamePadStick g_injectedGamePadStickL = { };
+GamePadStick g_injectedGamePadStickR = { };
 std::multimap<int, int> g_unifiedInputKeyMap;
 std::multimap<int, int> g_unifiedInputMouseButtonMap;
 

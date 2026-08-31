@@ -12,8 +12,16 @@ namespace
     const wchar_t* kGamePadTestWindowClassName = L"InputDeviceGamePadTestWindow";
     const int kControlMomentaryMode = 1001;
     const int kControlToggleMode = 1002;
-    const int kControlClear = 1003;
+    const int kControlKeyboardMode = 1003;
+    const int kControlClear = 1004;
     const int kControlFirstGamePadButton = 2000;
+
+    enum class TestInputMode
+    {
+        Momentary,
+        Toggle,
+        Keyboard,
+    };
 
     struct TestButtonDefinition
     {
@@ -45,7 +53,7 @@ namespace
     const std::size_t kTestButtonCount = sizeof(kTestButtons) / sizeof(kTestButtons[0]);
     HWND g_gamePadTestWindow = nullptr;
     WNDPROC g_originalButtonWindowProc = nullptr;
-    bool g_toggleMode = false;
+    TestInputMode g_testInputMode = TestInputMode::Momentary;
     bool g_testButtonDown[kTestButtonCount] = { };
 
     void SetControlFont(HWND control)
@@ -97,6 +105,7 @@ namespace
     void ClearTestButtons()
     {
         GamePad::ClearInjectedButtons();
+        GamePad::ClearInjectedSticks();
         std::fill(&g_testButtonDown[0], &g_testButtonDown[kTestButtonCount], false);
 
         for (std::size_t i = 0; i < kTestButtonCount; ++i)
@@ -105,11 +114,29 @@ namespace
         }
     }
 
+    void SetTestButtonDown(GamePadButton button, bool isDown)
+    {
+        for (std::size_t i = 0; i < kTestButtonCount; ++i)
+        {
+            if (kTestButtons[i].button == button)
+            {
+                SetTestButtonDown(i, isDown);
+                return;
+            }
+        }
+    }
+
+    void SetTestInputMode(TestInputMode mode)
+    {
+        ClearTestButtons();
+        g_testInputMode = mode;
+    }
+
     LRESULT CALLBACK TestButtonWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         std::size_t index = static_cast<std::size_t>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
-        if (!g_toggleMode)
+        if (g_testInputMode == TestInputMode::Momentary)
         {
             if (message == WM_LBUTTONDOWN ||
                 (message == WM_KEYDOWN && wParam == VK_SPACE))
@@ -162,8 +189,27 @@ namespace
             L"BUTTON", L"トグルモード", BS_AUTORADIOBUTTON | WS_TABSTOP,
             135, 12, 115, 22, kControlToggleMode);
         CreateTestControl(
+            L"BUTTON", L"キーボードモード", BS_AUTORADIOBUTTON | WS_TABSTOP,
+            255, 12, 125, 22, kControlKeyboardMode);
+        CreateTestControl(
             L"BUTTON", L"すべて解除", BS_PUSHBUTTON | WS_TABSTOP,
-            270, 10, 95, 25, kControlClear);
+            395, 10, 95, 25, kControlClear);
+
+        CreateTestControl(
+            L"BUTTON", L"キーボードモードの割り当て", BS_GROUPBOX,
+            390, 45, 225, 175, 0);
+        CreateTestControl(
+            L"STATIC",
+            L"左スティック  W A S D\r\n"
+            L"右スティック  T F G H\r\n"
+            L"十字キー      方向キー\r\n\r\n"
+            L"ボタン  I=Y  J=X  K=A  L=B\r\n"
+            L"L側     Q=L1  E=L2\r\n"
+            L"R側     U=R1  O=R2\r\n"
+            L"システム R=START\r\n"
+            L"         Y=SELECT/BACK",
+            SS_LEFT,
+            405, 67, 195, 140, 0);
 
         SendMessage(momentaryMode, BM_SETCHECK, BST_CHECKED, 0);
 
@@ -206,15 +252,23 @@ namespace
             int notificationCode = HIWORD(wParam);
             if (controlId == kControlMomentaryMode && notificationCode == BN_CLICKED)
             {
-                g_toggleMode = false;
-                ClearTestButtons();
+                SetTestInputMode(TestInputMode::Momentary);
                 return 0;
             }
 
             if (controlId == kControlToggleMode && notificationCode == BN_CLICKED)
             {
-                g_toggleMode = true;
-                ClearTestButtons();
+                SetTestInputMode(TestInputMode::Toggle);
+                return 0;
+            }
+
+            if (controlId == kControlKeyboardMode && notificationCode == BN_CLICKED)
+            {
+                SetTestInputMode(TestInputMode::Keyboard);
+                if (g_inputHWnd != nullptr)
+                {
+                    SetForegroundWindow(g_inputHWnd);
+                }
                 return 0;
             }
 
@@ -225,7 +279,8 @@ namespace
             }
 
             int index = controlId - kControlFirstGamePadButton;
-            if (g_toggleMode && notificationCode == BN_CLICKED &&
+            if (g_testInputMode == TestInputMode::Toggle &&
+                notificationCode == BN_CLICKED &&
                 0 <= index && static_cast<std::size_t>(index) < kTestButtonCount)
             {
                 bool isDown = !g_testButtonDown[index];
@@ -236,7 +291,8 @@ namespace
         }
 
         case WM_ACTIVATE:
-            if (LOWORD(wParam) == WA_INACTIVE && !g_toggleMode)
+            if (LOWORD(wParam) == WA_INACTIVE &&
+                g_testInputMode == TestInputMode::Momentary)
             {
                 ClearTestButtons();
             }
@@ -274,6 +330,79 @@ namespace
     }
 }
 
+bool Internal::IsGamePadTestKeyboardMode()
+{
+    if (g_gamePadTestWindow == nullptr || !IsWindowVisible(g_gamePadTestWindow))
+    {
+        return false;
+    }
+
+    return g_testInputMode == TestInputMode::Keyboard;
+}
+
+void Internal::UpdateGamePadTestKeyboardInput()
+{
+    if (!IsGamePadTestKeyboardMode())
+    {
+        return;
+    }
+
+    float stickLX = 0.0f;
+    float stickLY = 0.0f;
+    if (SKeyBoard::IsDown(DIK_A))
+    {
+        stickLX -= 1.0f;
+    }
+    if (SKeyBoard::IsDown(DIK_D))
+    {
+        stickLX += 1.0f;
+    }
+    if (SKeyBoard::IsDown(DIK_W))
+    {
+        stickLY += 1.0f;
+    }
+    if (SKeyBoard::IsDown(DIK_S))
+    {
+        stickLY -= 1.0f;
+    }
+    GamePad::SetInjectedStickL(stickLX, stickLY);
+
+    float stickRX = 0.0f;
+    float stickRY = 0.0f;
+    if (SKeyBoard::IsDown(DIK_F))
+    {
+        stickRX -= 1.0f;
+    }
+    if (SKeyBoard::IsDown(DIK_H))
+    {
+        stickRX += 1.0f;
+    }
+    if (SKeyBoard::IsDown(DIK_T))
+    {
+        stickRY += 1.0f;
+    }
+    if (SKeyBoard::IsDown(DIK_G))
+    {
+        stickRY -= 1.0f;
+    }
+    GamePad::SetInjectedStickR(stickRX, stickRY);
+
+    SetTestButtonDown(GAMEPAD_POV_UP, SKeyBoard::IsDown(DIK_UP));
+    SetTestButtonDown(GAMEPAD_POV_RIGHT, SKeyBoard::IsDown(DIK_RIGHT));
+    SetTestButtonDown(GAMEPAD_POV_DOWN, SKeyBoard::IsDown(DIK_DOWN));
+    SetTestButtonDown(GAMEPAD_POV_LEFT, SKeyBoard::IsDown(DIK_LEFT));
+    SetTestButtonDown(GAMEPAD_Y, SKeyBoard::IsDown(DIK_I));
+    SetTestButtonDown(GAMEPAD_X, SKeyBoard::IsDown(DIK_J));
+    SetTestButtonDown(GAMEPAD_A, SKeyBoard::IsDown(DIK_K));
+    SetTestButtonDown(GAMEPAD_B, SKeyBoard::IsDown(DIK_L));
+    SetTestButtonDown(GAMEPAD_L1, SKeyBoard::IsDown(DIK_Q));
+    SetTestButtonDown(GAMEPAD_L2, SKeyBoard::IsDown(DIK_E));
+    SetTestButtonDown(GAMEPAD_R1, SKeyBoard::IsDown(DIK_U));
+    SetTestButtonDown(GAMEPAD_R2, SKeyBoard::IsDown(DIK_O));
+    SetTestButtonDown(GAMEPAD_START, SKeyBoard::IsDown(DIK_R));
+    SetTestButtonDown(GAMEPAD_BACK, SKeyBoard::IsDown(DIK_Y));
+}
+
 void GamePad::ToggleTestDialog(HWND parentWindow)
 {
     if (g_gamePadTestWindow == nullptr)
@@ -286,8 +415,8 @@ void GamePad::ToggleTestDialog(HWND parentWindow)
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
-            410,
-            270,
+            650,
+            285,
             parentWindow,
             nullptr,
             GetModuleHandleW(nullptr),

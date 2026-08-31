@@ -40,6 +40,10 @@ extern std::vector<BYTE> g_injectedGamePadButtonsRequested;
 extern std::vector<BYTE> g_injectedGamePadButtons;
 extern std::vector<BYTE> g_injectedGamePadButtonsPrev;
 extern std::deque<std::vector<BYTE>> g_injectedGamePadButtonDeque;
+extern GamePadStick g_injectedGamePadStickLRequested;
+extern GamePadStick g_injectedGamePadStickRRequested;
+extern GamePadStick g_injectedGamePadStickL;
+extern GamePadStick g_injectedGamePadStickR;
 
 extern const std::size_t kMouseButtonCount;
 extern const std::size_t kGamePadButtonCount;
@@ -88,6 +92,8 @@ void SetGamePadXButtonState(std::vector<BYTE>* buttonState, GamePadButton button
 void SetGamePadAxisRange(DWORD objectOffset);
 void ReleaseGamePadDDevice();
 void UpdateInjectedGamePadState();
+void UpdateGamePadTestKeyboardInput();
+bool IsGamePadTestKeyboardMode();
 void DestroyGamePadTestDialog();
 
 // DirectInput の POV は「角度」で返ってくるので、

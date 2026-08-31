@@ -285,7 +285,10 @@ public:
     static GamePadStick GetStickL();
     static GamePadStick GetStickR();
     static void SetInjectedButtonDown(GamePadButton button, bool isDown);
+    static void SetInjectedStickL(float x, float y);
+    static void SetInjectedStickR(float x, float y);
     static void ClearInjectedButtons();
+    static void ClearInjectedSticks();
 
     // 実機がなくてもゲームパッド入力を確認できるテスト用ウィンドウ。
     // 同じ関数をもう一度呼ぶと表示と非表示が切り替わる。
