@@ -53,6 +53,10 @@ const LONG kGamePadAxisMax = 1000;
 const float kGamePadStickDeadZone = 0.05f;
 const BYTE kGamePadXTriggerThreshold = 30;
 const ULONGLONG kGamePadSearchIntervalMilliseconds = 5000;
+std::vector<BYTE> g_injectedGamePadButtonsRequested(kGamePadXButtonStateCount);
+std::vector<BYTE> g_injectedGamePadButtons(kGamePadXButtonStateCount);
+std::vector<BYTE> g_injectedGamePadButtonsPrev(kGamePadXButtonStateCount);
+std::deque<std::vector<BYTE>> g_injectedGamePadButtonDeque;
 std::multimap<int, int> g_unifiedInputKeyMap;
 std::multimap<int, int> g_unifiedInputMouseButtonMap;
 

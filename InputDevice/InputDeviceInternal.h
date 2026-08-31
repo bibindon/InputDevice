@@ -36,6 +36,10 @@ extern std::deque<std::vector<BYTE>> g_gamePadXButtonDeque;
 extern bool g_gamePadXConnected;
 extern GamePad_D g_gamePadD;
 extern GamePad_X g_gamePadX;
+extern std::vector<BYTE> g_injectedGamePadButtonsRequested;
+extern std::vector<BYTE> g_injectedGamePadButtons;
+extern std::vector<BYTE> g_injectedGamePadButtonsPrev;
+extern std::deque<std::vector<BYTE>> g_injectedGamePadButtonDeque;
 
 extern const std::size_t kMouseButtonCount;
 extern const std::size_t kGamePadButtonCount;
@@ -83,6 +87,8 @@ IGamePad* GetActiveGamePad();
 void SetGamePadXButtonState(std::vector<BYTE>* buttonState, GamePadButton button);
 void SetGamePadAxisRange(DWORD objectOffset);
 void ReleaseGamePadDDevice();
+void UpdateInjectedGamePadState();
+void DestroyGamePadTestDialog();
 
 // DirectInput の POV は「角度」で返ってくるので、
 // 上右下左の論理ボタンへ読み替えるための補助関数。

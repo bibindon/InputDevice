@@ -284,6 +284,12 @@ public:
     static bool IsUpFirstFrame(GamePadButton button);
     static GamePadStick GetStickL();
     static GamePadStick GetStickR();
+    static void SetInjectedButtonDown(GamePadButton button, bool isDown);
+    static void ClearInjectedButtons();
+
+    // 実機がなくてもゲームパッド入力を確認できるテスト用ウィンドウ。
+    // 同じ関数をもう一度呼ぶと表示と非表示が切り替わる。
+    static void ToggleTestDialog(HWND parentWindow);
 
 private:
 };

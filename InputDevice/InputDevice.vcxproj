@@ -143,6 +143,7 @@
   <ItemGroup>
     <ClCompile Include="InputDevice.cpp" />
     <ClCompile Include="InputDeviceGamePad.cpp" />
+    <ClCompile Include="InputDeviceGamePadTestDialog.cpp" />
     <ClCompile Include="InputDeviceKeyboard.cpp" />
     <ClCompile Include="InputDeviceMouse.cpp" />
     <ClCompile Include="InputDeviceShared.cpp" />

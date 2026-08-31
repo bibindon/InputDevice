@@ -27,8 +27,7 @@ void Initialize(HINSTANCE hInstance, HWND hWnd)
     SKeyBoard::Set(keyboard);
     g_keyboardOwnedByLibrary = true;
     Mouse::Initialize();
-    g_gamePadD.Initialize();
-    g_gamePadX.Initialize();
+    GamePad::Initialize();
 
     // 抜き差し対応では再接続タイマーを使うため、
     // 起動直後の時刻をここでそろえておく。
@@ -42,8 +41,7 @@ void Update()
     // それぞれのクラスが「現在状態」「前フレーム状態」「履歴」を更新する。
     SKeyBoard::Update();
     Mouse::Update();
-    g_gamePadD.Update();
-    g_gamePadX.Update();
+    GamePad::Update();
 }
 
 void SetRemoteDesktopMode(bool enabled)
@@ -62,8 +60,8 @@ void Finalize()
 {
     // 逆順で破棄していくと依存関係を追いやすい。
     // 先に個別デバイスを解放し、最後に DirectInput 本体を解放する。
-    g_gamePadX.Finalize();
-    g_gamePadD.Finalize();
+    DestroyGamePadTestDialog();
+    GamePad::Finalize();
     Mouse::Finalize();
 
     IKeyBoard* keyboard = SKeyBoard::Get();

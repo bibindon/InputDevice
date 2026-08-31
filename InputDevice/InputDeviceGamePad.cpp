@@ -1,10 +1,50 @@
 ﻿#include "InputDeviceInternal.h"
 #include <algorithm>
+#include <stdexcept>
 
 namespace InputDevice
 {
 
 using namespace Internal;
+
+namespace
+{
+    bool IsInjectedGamePadButtonDown(GamePadButton button)
+    {
+        if (!IsValidGamePadXButtonStateIndex(button))
+        {
+            return false;
+        }
+
+        std::size_t index = static_cast<std::size_t>(button);
+        return (g_injectedGamePadButtons.at(index) & 0x80) != 0;
+    }
+
+    bool WasInjectedGamePadButtonDown(GamePadButton button)
+    {
+        if (!IsValidGamePadXButtonStateIndex(button))
+        {
+            return false;
+        }
+
+        std::size_t index = static_cast<std::size_t>(button);
+        return (g_injectedGamePadButtonsPrev.at(index) & 0x80) != 0;
+    }
+}
+
+void Internal::UpdateInjectedGamePadState()
+{
+    g_injectedGamePadButtonsPrev = g_injectedGamePadButtons;
+    g_injectedGamePadButtons = g_injectedGamePadButtonsRequested;
+    g_injectedGamePadButtonDeque.push_front(g_injectedGamePadButtons);
+
+    if (g_injectedGamePadButtonDeque.size() >= kInputHistoryFrameCount)
+    {
+        g_injectedGamePadButtonDeque.erase(
+            g_injectedGamePadButtonDeque.begin() + kInputHistoryFrameCount,
+            g_injectedGamePadButtonDeque.end());
+    }
+}
 
 bool GamePad_D::Initialize()
 {
@@ -465,6 +505,7 @@ IGamePad* GetGamePadX()
 
 bool GamePad::Initialize()
 {
+    ClearInjectedButtons();
     bool isDirectInputInitialized = g_gamePadD.Initialize();
     bool isXInputInitialized = g_gamePadX.Initialize();
 
@@ -483,6 +524,7 @@ bool GamePad::Initialize()
 
 bool GamePad::Finalize()
 {
+    ClearInjectedButtons();
     bool isXInputFinalized = g_gamePadX.Finalize();
     bool isDirectInputFinalized = g_gamePadD.Finalize();
 
@@ -498,6 +540,7 @@ bool GamePad::Update()
 {
     bool isDirectInputUpdated = g_gamePadD.Update();
     bool isXInputUpdated = g_gamePadX.Update();
+    UpdateInjectedGamePadState();
 
     // 戻り値も XInput 優先にしておくと、
     // 呼び出し側は「今どちらが生きているか」を細かく見なくて済む。
@@ -516,6 +559,11 @@ bool GamePad::Update()
 
 bool GamePad::IsDown(GamePadButton button)
 {
+    if (IsInjectedGamePadButtonDown(button))
+    {
+        return true;
+    }
+
     IGamePad* gamePad = GetActiveGamePad();
     if (gamePad == nullptr)
     {
@@ -527,6 +575,12 @@ bool GamePad::IsDown(GamePadButton button)
 
 bool GamePad::IsDownFirstFrame(GamePadButton button)
 {
+    if (IsInjectedGamePadButtonDown(button) &&
+        !WasInjectedGamePadButtonDown(button))
+    {
+        return true;
+    }
+
     IGamePad* gamePad = GetActiveGamePad();
     if (gamePad == nullptr)
     {
@@ -549,6 +603,29 @@ bool GamePad::IsHold(GamePadButton button)
 
 bool GamePad::IsHoldDuration(GamePadButton button, float seconds)
 {
+    if (IsValidGamePadXButtonStateIndex(button))
+    {
+        std::size_t holdFrameCount = GetHoldFrameCountForDuration(seconds);
+        if (holdFrameCount < g_injectedGamePadButtonDeque.size())
+        {
+            bool isInjectedHold = true;
+            std::size_t index = static_cast<std::size_t>(button);
+            for (std::size_t i = 0; i < holdFrameCount; ++i)
+            {
+                if ((g_injectedGamePadButtonDeque.at(i).at(index) & 0x80) == 0)
+                {
+                    isInjectedHold = false;
+                    break;
+                }
+            }
+
+            if (isInjectedHold)
+            {
+                return true;
+            }
+        }
+    }
+
     IGamePad* gamePad = GetActiveGamePad();
     if (gamePad == nullptr)
     {
@@ -560,6 +637,12 @@ bool GamePad::IsHoldDuration(GamePadButton button, float seconds)
 
 bool GamePad::IsUpFirstFrame(GamePadButton button)
 {
+    if (!IsInjectedGamePadButtonDown(button) &&
+        WasInjectedGamePadButtonDown(button))
+    {
+        return true;
+    }
+
     IGamePad* gamePad = GetActiveGamePad();
     if (gamePad == nullptr)
     {
@@ -591,6 +674,35 @@ GamePadStick GamePad::GetStickR()
     }
 
     return gamePad->GetStickR();
+}
+
+void GamePad::SetInjectedButtonDown(GamePadButton button, bool isDown)
+{
+    if (!IsValidGamePadXButtonStateIndex(button))
+    {
+        throw std::out_of_range("Injected game pad button is out of range.");
+    }
+
+    std::size_t index = static_cast<std::size_t>(button);
+    if (isDown)
+    {
+        g_injectedGamePadButtonsRequested.at(index) = 0x80;
+    }
+    else
+    {
+        g_injectedGamePadButtonsRequested.at(index) = 0;
+    }
+}
+
+void GamePad::ClearInjectedButtons()
+{
+    std::fill(g_injectedGamePadButtonsRequested.begin(),
+              g_injectedGamePadButtonsRequested.end(), 0);
+    std::fill(g_injectedGamePadButtons.begin(),
+              g_injectedGamePadButtons.end(), 0);
+    std::fill(g_injectedGamePadButtonsPrev.begin(),
+              g_injectedGamePadButtonsPrev.end(), 0);
+    g_injectedGamePadButtonDeque.clear();
 }
 
 }
